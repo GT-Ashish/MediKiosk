@@ -1,0 +1,73 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Frontend build output
+frontend/dist/
+frontend/build/
+
+# Backend
+backend/*.db
+backend/*.sqlite3
+
+# AI model files (large binaries)
+ai/models/*.bin
+ai/models/*.pt
+ai/models/*.onnx
+ai/models/*.pkl
+
+# Logs
+*.log
+logs/
+
+# Coverage & test reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.pytest_cache/
+.mypy_cache/
+
+# Docker
+docker-compose.override.yml
+
+# OS files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Secrets — NEVER commit these
+*.pem
+*.key
+secrets/
