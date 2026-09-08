@@ -1,0 +1,10 @@
+# Core
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+python-dotenv
+
+# Testing (required by AGENTS.md rule 11)
+pytest
+httpx

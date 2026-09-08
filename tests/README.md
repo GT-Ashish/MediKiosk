@@ -4,22 +4,22 @@ Test suites for backend, AI services, and integration testing.
 
 ## Status
 
-Not yet initialized. Tests will be added alongside feature implementation.
+Backend test suite initialized with pytest and FastAPI TestClient.
 
-## Planned Structure
+## Structure
 
 ```
 tests/
-├── backend/            # Backend API and service tests
-├── ai/                 # AI module unit tests
-├── integration/        # End-to-end integration tests
-├── conftest.py         # Shared pytest fixtures
-└── README.md           # This file
+├── backend/
+│   ├── __init__.py
+│   └── test_health.py      # Health endpoint & CORS unit tests
+├── conftest.py             # Shared pytest fixtures (TestClient)
+└── README.md               # This file
 ```
 
-## Testing Strategy
+## Running Tests
 
-- **Backend**: pytest + httpx (FastAPI test client)
-- **AI Services**: pytest with mocked AI providers
-- **Integration**: End-to-end tests covering the full patient journey
-- **Frontend**: Vitest + React Testing Library (configured in frontend/)
+```bash
+# Run all tests using backend virtualenv
+backend\.venv\Scripts\pytest.exe tests/ -v
+```
