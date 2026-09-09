@@ -1,89 +1,78 @@
-/**
- * MediKiosk — Application Shell.
- *
- * This is the root application component. Currently displays the project
- * status page with backend health check. The actual patient-facing UI
- * (conversational history, document scanning, etc.) will be built later.
- */
+import React from 'react'
+import { KioskProvider, useKiosk } from './context/KioskContext'
+import { KioskHeader } from './components/patient/KioskHeader'
+import { LanguagePage } from './pages/patient/LanguagePage'
+import { ConsentPage } from './pages/patient/ConsentPage'
+import { IdentificationPage } from './pages/patient/IdentificationPage'
+import { VisitReasonPage } from './pages/patient/VisitReasonPage'
+import { ComplaintPage } from './pages/patient/ComplaintPage'
+import { HistoryTakingPage } from './pages/patient/HistoryTakingPage'
+import { DocumentsPage } from './pages/patient/DocumentsPage'
+import { ReviewSummaryPage } from './pages/patient/ReviewSummaryPage'
+import { ConfirmationPage } from './pages/patient/ConfirmationPage'
+import { FollowUpPage } from './pages/patient/FollowUpPage'
+import { DoctorDashboard } from './pages/doctor/DoctorDashboard'
 
-import { HealthStatus } from './components/HealthStatus'
+const KioskApp: React.FC = () => {
+  const { currentRoute, appMode, goTo } = useKiosk()
 
-function App() {
+  // If in Doctor Mode, show the physician review dashboard
+  if (appMode === 'doctor') {
+    return <DoctorDashboard />
+  }
+
+  // Otherwise, render the patient kiosk flow
   return (
-    <div className="min-h-screen bg-gradient-to-br from-surface-50 via-primary-50/30 to-surface-100">
-      {/* Header */}
-      <header className="border-b border-surface-200/60 bg-white/60 backdrop-blur-md sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white font-bold text-sm shadow-md">
-              M
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-surface-900 leading-tight">
-                MediKiosk
-              </h1>
-              <p className="text-xs text-surface-500 leading-tight">
-                AI Clinical History Platform
-              </p>
-            </div>
-          </div>
-          <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
-            Development
-          </span>
-        </div>
-      </header>
+    <div className="min-h-screen bg-[#F6F8F7] flex flex-col justify-between selection:bg-[#DCEDEA] selection:text-[#2F7D73]">
+      {/* Top Header & Step Progress Bar */}
+      <KioskHeader />
 
-      {/* Main Content */}
-      <main className="max-w-5xl mx-auto px-6 py-12">
-        <div className="text-center mb-12 animate-fade-in">
-          <h2 className="text-3xl font-bold text-surface-900 mb-3">
-            Project Status
-          </h2>
-          <p className="text-surface-500 max-w-xl mx-auto">
-            MediKiosk is under active development. This page verifies that the
-            frontend and backend services are running and connected.
-          </p>
-        </div>
-
-        {/* Health Check Card */}
-        <div className="animate-fade-in" style={{ animationDelay: '0.15s', animationFillMode: 'backwards' }}>
-          <HealthStatus />
-        </div>
-
-        {/* Module Status Grid */}
-        <div className="mt-12 animate-fade-in" style={{ animationDelay: '0.3s', animationFillMode: 'backwards' }}>
-          <h3 className="text-sm font-semibold text-surface-500 uppercase tracking-wider mb-4 text-center">
-            Module Status
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              { label: 'History Engine', icon: '🎙️', status: 'Planned' },
-              { label: 'Document AI', icon: '📄', status: 'Planned' },
-              { label: 'Summary Gen', icon: '📋', status: 'Planned' },
-              { label: 'ABDM Integration', icon: '🔗', status: 'Pending Review' },
-            ].map((mod) => (
-              <div
-                key={mod.label}
-                className="rounded-xl border border-surface-200 bg-white/60 backdrop-blur-sm p-4 text-center"
-              >
-                <span className="text-2xl mb-2 block">{mod.icon}</span>
-                <p className="text-sm font-semibold text-surface-800">{mod.label}</p>
-                <span className="inline-block mt-1.5 text-xs font-medium px-2 py-0.5 rounded-full bg-surface-100 text-surface-500">
-                  {mod.status}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
+      {/* Main Screen Content */}
+      <main className="flex-1 w-full max-w-5xl mx-auto p-4 flex flex-col justify-center">
+        {currentRoute === 'language' && <LanguagePage />}
+        {currentRoute === 'consent' && <ConsentPage />}
+        {currentRoute === 'identification' && <IdentificationPage />}
+        {currentRoute === 'visit_reason' && <VisitReasonPage />}
+        {currentRoute === 'complaint' && <ComplaintPage />}
+        {currentRoute === 'history_taking' && <HistoryTakingPage />}
+        {currentRoute === 'documents' && <DocumentsPage />}
+        {currentRoute === 'review' && <ReviewSummaryPage />}
+        {currentRoute === 'confirmation' && <ConfirmationPage />}
+        {currentRoute === 'follow_up' && <FollowUpPage />}
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-surface-200/60 bg-white/40 mt-12">
-        <div className="max-w-5xl mx-auto px-6 py-4 text-center text-xs text-surface-400">
-          MediKiosk — SIH 2026 · AI-Powered Clinical History Software Platform
+      {/* Minimal Bottom Bar with Demo Navigation Shortcut */}
+      <footer className="w-full py-2 px-6 border-t border-[#D9E2DF] bg-white text-center text-xs text-[#647471] flex flex-wrap items-center justify-between gap-2">
+        <span>MediKiosk SIH 2026 • AI-Powered Clinical History Platform</span>
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-semibold text-[#647471]">Quick Jump (Demo):</span>
+          <select
+            value={currentRoute}
+            onChange={(e) => goTo(e.target.value as any)}
+            className="text-[11px] font-medium bg-[#F6F8F7] border border-[#D9E2DF] rounded px-2 py-0.5 text-[#243331] outline-none"
+          >
+            <option value="language">1. Language</option>
+            <option value="consent">2. Consent</option>
+            <option value="identification">3. Identification</option>
+            <option value="visit_reason">4. Visit Reason</option>
+            <option value="complaint">5. Chief Complaint (New)</option>
+            <option value="history_taking">6. History Taking (New)</option>
+            <option value="documents">7. Documents</option>
+            <option value="review">8. Review Summary</option>
+            <option value="confirmation">9. Confirmation</option>
+            <option value="follow_up">10. Follow-up Visits</option>
+          </select>
         </div>
       </footer>
     </div>
+  )
+}
+
+function App() {
+  return (
+    <KioskProvider>
+      <KioskApp />
+    </KioskProvider>
   )
 }
 
