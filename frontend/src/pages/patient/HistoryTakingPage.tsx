@@ -1,7 +1,12 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { useKiosk } from '../../context/KioskContext'
 import { useInstructionPlayer } from '../../hooks/useInstructionPlayer'
 import { HearAgainButton } from '../../components/patient/HearAgainButton'
+import {
+  startSpeechRecognition,
+  stopSpeaking,
+  type SpeechRecognitionControls,
+} from '../../utils/speech'
 
 type QuestionKey = 'onset' | 'location' | 'severity' | 'associated'
 
@@ -24,20 +29,39 @@ export const HistoryTakingPage: React.FC = () => {
 
   const [isListening, setIsListening] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [liveTranscript, setLiveTranscript] = useState('')
   const [currentAnswer, setCurrentAnswer] = useState<string>(
     historyAnswers[currentKey] || ''
   )
   const [isTypingCustom, setIsTypingCustom] = useState(false)
   const [customText, setCustomText] = useState('')
 
-  const voiceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const recognitionControlsRef = useRef<SpeechRecognitionControls | null>(null)
+  const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const processingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isComponentMountedRef = useRef<boolean>(true)
 
-  const clearVoiceTimers = () => {
-    if (voiceTimerRef.current) {
-      clearTimeout(voiceTimerRef.current)
-      voiceTimerRef.current = null
+  const clearVoiceTimers = useCallback(() => {
+    if (fallbackTimerRef.current) {
+      clearTimeout(fallbackTimerRef.current)
+      fallbackTimerRef.current = null
     }
-  }
+    if (processingTimerRef.current) {
+      clearTimeout(processingTimerRef.current)
+      processingTimerRef.current = null
+    }
+  }, [])
+
+  const abortActiveRecognition = useCallback(() => {
+    if (recognitionControlsRef.current) {
+      try {
+        recognitionControlsRef.current.abort()
+      } catch {
+        // ignore
+      }
+      recognitionControlsRef.current = null
+    }
+  }, [])
 
   // Audio instruction for current question
   const {
@@ -57,46 +81,106 @@ export const HistoryTakingPage: React.FC = () => {
 
   // Sync state when advancing questions
   useEffect(() => {
+    abortActiveRecognition()
     clearVoiceTimers()
+    stopSpeaking()
     setIsListening(false)
     setIsProcessing(false)
+    setLiveTranscript('')
     setIsTypingCustom(false)
     setCustomText('')
     setCurrentAnswer(historyAnswers[currentKey] || '')
-  }, [questionIndex, currentKey, historyAnswers])
+  }, [questionIndex, currentKey, historyAnswers, abortActiveRecognition, clearVoiceTimers])
 
   useEffect(() => {
+    isComponentMountedRef.current = true
     return () => {
+      isComponentMountedRef.current = false
       clearVoiceTimers()
+      abortActiveRecognition()
+      stopSpeaking()
     }
-  }, [])
+  }, [clearVoiceTimers, abortActiveRecognition])
 
-  // Manual Voice Input Trigger
+  // Real Speech Recognition with graceful fallback
   const handleStartVoice = () => {
     stopPlayback()
-    setIsTypingCustom(false)
+    stopSpeaking()
+    abortActiveRecognition()
     clearVoiceTimers()
+    setIsTypingCustom(false)
     setIsListening(true)
     setIsProcessing(false)
+    setLiveTranscript('')
 
-    // Simulate 2.5s listening
-    voiceTimerRef.current = setTimeout(() => {
+    let hasReceivedFinal = false
+
+    // Safety fallback timer (3.6s)
+    fallbackTimerRef.current = setTimeout(() => {
+      if (!isComponentMountedRef.current || hasReceivedFinal) return
+      abortActiveRecognition()
       setIsListening(false)
       setIsProcessing(true)
 
-      // Simulate 1.2s processing
-      voiceTimerRef.current = setTimeout(() => {
+      processingTimerRef.current = setTimeout(() => {
+        if (!isComponentMountedRef.current) return
         setIsProcessing(false)
         const mockVoiceResult = questionData.mockAnswer
         setCurrentAnswer(mockVoiceResult)
         setAnswerForQuestion(currentKey, questionData.title, mockVoiceResult)
-      }, 1200)
-    }, 2500)
+      }, 900)
+    }, 3600)
+
+    // Start browser SpeechRecognition
+    const controls = startSpeechRecognition(selectedLanguage.code, {
+      onResult: (transcriptText, isFinal) => {
+        if (!isComponentMountedRef.current) return
+        setLiveTranscript(transcriptText)
+
+        if (isFinal && transcriptText.trim()) {
+          hasReceivedFinal = true
+          clearVoiceTimers()
+          abortActiveRecognition()
+          setIsListening(false)
+          setIsProcessing(true)
+
+          processingTimerRef.current = setTimeout(() => {
+            if (!isComponentMountedRef.current) return
+            setIsProcessing(false)
+            setCurrentAnswer(transcriptText.trim())
+            setAnswerForQuestion(currentKey, questionData.title, transcriptText.trim())
+          }, 700)
+        }
+      },
+      onEnd: (finalTranscript) => {
+        if (!isComponentMountedRef.current || hasReceivedFinal) return
+        if (finalTranscript.trim()) {
+          hasReceivedFinal = true
+          clearVoiceTimers()
+          setIsListening(false)
+          setIsProcessing(true)
+
+          processingTimerRef.current = setTimeout(() => {
+            if (!isComponentMountedRef.current) return
+            setIsProcessing(false)
+            setCurrentAnswer(finalTranscript.trim())
+            setAnswerForQuestion(currentKey, questionData.title, finalTranscript.trim())
+          }, 700)
+        }
+      },
+      onError: (err) => {
+        console.warn('[SpeechRecognition on Page 6 Notice]:', err?.error || err)
+      },
+    })
+
+    recognitionControlsRef.current = controls
   }
 
   // Touch Option Selection
   const handleSelectOption = (optionLabel: string) => {
     stopPlayback()
+    stopSpeaking()
+    abortActiveRecognition()
     clearVoiceTimers()
     setIsListening(false)
     setIsProcessing(false)
@@ -108,8 +192,11 @@ export const HistoryTakingPage: React.FC = () => {
   // Skip / Not Sure
   const handleSkip = () => {
     stopPlayback()
+    stopSpeaking()
+    abortActiveRecognition()
     clearVoiceTimers()
     setIsListening(false)
+    setIsProcessing(false)
     const skipLabel = t.common.skip
     setCurrentAnswer(skipLabel)
     setAnswerForQuestion(currentKey, questionData.title, skipLabel)
@@ -120,6 +207,10 @@ export const HistoryTakingPage: React.FC = () => {
   const handleSubmitCustom = (e: React.FormEvent) => {
     e.preventDefault()
     if (customText.trim()) {
+      stopPlayback()
+      stopSpeaking()
+      abortActiveRecognition()
+      clearVoiceTimers()
       setCurrentAnswer(customText.trim())
       setAnswerForQuestion(currentKey, questionData.title, customText.trim())
       setIsTypingCustom(false)
@@ -127,6 +218,11 @@ export const HistoryTakingPage: React.FC = () => {
   }
 
   const advanceNext = (overrideAnswer?: string) => {
+    stopPlayback()
+    stopSpeaking()
+    abortActiveRecognition()
+    clearVoiceTimers()
+
     const finalAnswer = overrideAnswer || currentAnswer
     if (finalAnswer) {
       setAnswerForQuestion(currentKey, questionData.title, finalAnswer)
@@ -140,6 +236,11 @@ export const HistoryTakingPage: React.FC = () => {
   }
 
   const handlePreviousQuestion = () => {
+    stopPlayback()
+    stopSpeaking()
+    abortActiveRecognition()
+    clearVoiceTimers()
+
     if (questionIndex > 0) {
       setQuestionIndex((prev) => prev - 1)
     } else {
@@ -180,7 +281,9 @@ export const HistoryTakingPage: React.FC = () => {
               </h4>
               <p className="text-xs text-[#647471]">
                 {isListening
-                  ? t.page6_history.listening
+                  ? liveTranscript
+                    ? `"${liveTranscript}"`
+                    : t.page6_history.listening
                   : isProcessing
                   ? t.page6_history.processing
                   : 'Tap to speak your answer'}
@@ -285,14 +388,14 @@ export const HistoryTakingPage: React.FC = () => {
               />
               <button
                 type="submit"
-                className="px-5 py-3 bg-[#4F8A6D] text-white font-bold rounded-xl text-sm"
+                className="px-5 py-3 bg-[#4F8A6D] text-white font-bold rounded-xl text-sm cursor-pointer"
               >
                 {t.common.save}
               </button>
               <button
                 type="button"
                 onClick={() => setIsTypingCustom(false)}
-                className="px-4 py-3 border border-[#D9E2DF] text-[#647471] rounded-xl text-sm"
+                className="px-4 py-3 border border-[#D9E2DF] text-[#647471] rounded-xl text-sm cursor-pointer"
               >
                 {t.common.cancel}
               </button>
@@ -300,7 +403,11 @@ export const HistoryTakingPage: React.FC = () => {
           ) : (
             <button
               type="button"
-              onClick={() => setIsTypingCustom(true)}
+              onClick={() => {
+                abortActiveRecognition()
+                clearVoiceTimers()
+                setIsTypingCustom(true)
+              }}
               className="text-xs font-semibold text-[#647471] hover:text-[#2F7D73] flex items-center gap-1.5 cursor-pointer"
             >
               <span>⌨ {t.page6_history.typePlaceholder}</span>
@@ -308,7 +415,7 @@ export const HistoryTakingPage: React.FC = () => {
           )}
         </div>
 
-        {/* Prominent Skip / Not Sure Button (Section 19: Made large & noticeable!) */}
+        {/* Prominent Skip / Not Sure Button */}
         <div className="pt-2 border-t border-[#EBF0EE] flex justify-center">
           <button
             type="button"
@@ -338,8 +445,10 @@ export const HistoryTakingPage: React.FC = () => {
 
         <HearAgainButton
           onHearAgain={() => {
+            abortActiveRecognition()
             clearVoiceTimers()
             setIsListening(false)
+            setIsProcessing(false)
             replayInstruction()
           }}
           status={instructionStatus}

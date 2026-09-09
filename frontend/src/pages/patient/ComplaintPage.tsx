@@ -1,7 +1,12 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { useKiosk } from '../../context/KioskContext'
 import { useInstructionPlayer } from '../../hooks/useInstructionPlayer'
 import { HearAgainButton } from '../../components/patient/HearAgainButton'
+import {
+  startSpeechRecognition,
+  stopSpeaking,
+  type SpeechRecognitionControls,
+} from '../../utils/speech'
 
 type Page5State =
   | 'INSTRUCTION_PLAYING'
@@ -25,14 +30,35 @@ export const ComplaintPage: React.FC = () => {
 
   const [state, setState] = useState<Page5State>('INSTRUCTION_PLAYING')
   const [typedText, setTypedText] = useState<string>(chiefComplaint || '')
-  const voiceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [liveTranscript, setLiveTranscript] = useState<string>('')
+  const [inputSource, setInputSource] = useState<'voice_real' | 'voice_mock' | 'typed' | null>(null)
 
-  const clearVoiceTimers = () => {
-    if (voiceTimerRef.current) {
-      clearTimeout(voiceTimerRef.current)
-      voiceTimerRef.current = null
+  const recognitionControlsRef = useRef<SpeechRecognitionControls | null>(null)
+  const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const processingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isComponentMountedRef = useRef<boolean>(true)
+
+  const clearAllVoiceTimers = useCallback(() => {
+    if (fallbackTimerRef.current) {
+      clearTimeout(fallbackTimerRef.current)
+      fallbackTimerRef.current = null
     }
-  }
+    if (processingTimerRef.current) {
+      clearTimeout(processingTimerRef.current)
+      processingTimerRef.current = null
+    }
+  }, [])
+
+  const abortActiveRecognition = useCallback(() => {
+    if (recognitionControlsRef.current) {
+      try {
+        recognitionControlsRef.current.abort()
+      } catch {
+        // ignore
+      }
+      recognitionControlsRef.current = null
+    }
+  }, [])
 
   // Instruction plays once on entry
   const {
@@ -49,41 +75,100 @@ export const ComplaintPage: React.FC = () => {
     langCode: selectedLanguage.code,
     isMuted,
     onComplete: () => {
-      // Once instruction finishes, move to IDLE waiting state
+      // Once instruction finishes, move to IDLE choice state without mic running
       setState((prev) => (prev === 'INSTRUCTION_PLAYING' ? 'IDLE' : prev))
     },
   })
 
-  // Clean up timers on unmount
-  useEffect(() => {
-    return () => {
-      clearVoiceTimers()
-    }
-  }, [])
+  // Start Speech Recognition with graceful clinical fallback
+  const handleStartVoice = useCallback(() => {
+    // 1. Immediately cancel active TTS & audio
+    stopPlayback()
+    stopSpeaking()
 
-  // Manual trigger for Voice Recording
-  const handleStartVoice = () => {
-    stopPlayback() // Immediately stop any active instruction
-    clearVoiceTimers()
+    // 2. Abort any previous recognition & timers
+    abortActiveRecognition()
+    clearAllVoiceTimers()
+
+    setLiveTranscript('')
     setState('LISTENING')
 
-    // Simulate 2.8s listening
-    voiceTimerRef.current = setTimeout(() => {
+    let hasReceivedFinal = false
+
+    // Safety / Fallback Timer: if no speech after 3.8 seconds, fallback gracefully to mock
+    fallbackTimerRef.current = setTimeout(() => {
+      if (!isComponentMountedRef.current || hasReceivedFinal) return
+      abortActiveRecognition()
+      setInputSource('voice_mock')
       setState('PROCESSING')
 
-      // Simulate 1.2s processing
-      voiceTimerRef.current = setTimeout(() => {
+      processingTimerRef.current = setTimeout(() => {
+        if (!isComponentMountedRef.current) return
         const transcript = t.page5_complaint.mockTranscript
         setChiefComplaint(transcript)
         setState('SHOWING_TRANSCRIPT')
-      }, 1200)
-    }, 2800)
-  };
+      }, 1000)
+    }, 3800)
+
+    // 3. Start real browser SpeechRecognition
+    const controls = startSpeechRecognition(selectedLanguage.code, {
+      onResult: (transcriptText, isFinal) => {
+        if (!isComponentMountedRef.current) return
+        setLiveTranscript(transcriptText)
+
+        if (isFinal && transcriptText.trim()) {
+          hasReceivedFinal = true
+          clearAllVoiceTimers()
+          abortActiveRecognition()
+
+          setInputSource('voice_real')
+          setChiefComplaint(transcriptText.trim())
+          setState('PROCESSING')
+
+          processingTimerRef.current = setTimeout(() => {
+            if (!isComponentMountedRef.current) return
+            setState('SHOWING_TRANSCRIPT')
+          }, 800)
+        }
+      },
+      onEnd: (finalTranscript) => {
+        if (!isComponentMountedRef.current || hasReceivedFinal) return
+        if (finalTranscript.trim()) {
+          hasReceivedFinal = true
+          clearAllVoiceTimers()
+          setInputSource('voice_real')
+          setChiefComplaint(finalTranscript.trim())
+          setState('PROCESSING')
+
+          processingTimerRef.current = setTimeout(() => {
+            if (!isComponentMountedRef.current) return
+            setState('SHOWING_TRANSCRIPT')
+          }, 800)
+        }
+      },
+      onError: (err) => {
+        // If recognition failed/denied, fallback timer or immediate fallback completes cleanly
+        console.warn('[SpeechRecognition on Page 5 Notice]:', err?.error || err)
+      },
+    })
+
+    recognitionControlsRef.current = controls
+  }, [
+    abortActiveRecognition,
+    clearAllVoiceTimers,
+    selectedLanguage.code,
+    setChiefComplaint,
+    stopPlayback,
+    t.page5_complaint.mockTranscript,
+  ])
 
   // Start Typing (Interrupts any voice or instruction)
   const handleStartTyping = () => {
     stopPlayback()
-    clearVoiceTimers()
+    stopSpeaking()
+    abortActiveRecognition()
+    clearAllVoiceTimers()
+    setInputSource('typed')
     setState('TYPING')
   }
 
@@ -92,20 +177,45 @@ export const ComplaintPage: React.FC = () => {
     if (e) e.preventDefault()
     if (typedText.trim()) {
       setChiefComplaint(typedText.trim())
+      setInputSource('typed')
       setState('SUBMITTED')
     }
   }
 
-  // Hear Again Replay Handler
+  // Hear Again Replay Handler (Stops recognition, plays TTS)
   const handleHearAgain = () => {
-    clearVoiceTimers()
+    abortActiveRecognition()
+    clearAllVoiceTimers()
     setState('INSTRUCTION_PLAYING')
     replayInstruction()
   }
 
   const handleNext = () => {
+    abortActiveRecognition()
+    clearAllVoiceTimers()
+    stopPlayback()
+    stopSpeaking()
     goTo('history_taking')
   }
+
+  const handleBack = () => {
+    abortActiveRecognition()
+    clearAllVoiceTimers()
+    stopPlayback()
+    stopSpeaking()
+    goBack()
+  }
+
+  // Clean up timers, speech, and recognition on unmount
+  useEffect(() => {
+    isComponentMountedRef.current = true
+    return () => {
+      isComponentMountedRef.current = false
+      clearAllVoiceTimers()
+      abortActiveRecognition()
+      stopSpeaking()
+    }
+  }, [clearAllVoiceTimers, abortActiveRecognition])
 
   const hasValidResponse = Boolean(chiefComplaint.trim())
 
@@ -131,16 +241,16 @@ export const ComplaintPage: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
               </svg>
             </div>
-            <p className="text-xl font-semibold text-[#243331]">
+            <p className="text-xl font-semibold text-[#243331] max-w-lg">
               {t.page5_complaint.instruction}
             </p>
             <div className="flex gap-3 pt-2">
               <button
                 type="button"
                 onClick={handleStartVoice}
-                className="px-5 py-2.5 bg-[#2F7D73] hover:bg-[#276B63] text-white font-bold rounded-xl text-sm transition-colors cursor-pointer"
+                className="px-5 py-2.5 bg-[#2F7D73] hover:bg-[#276B63] text-white font-bold rounded-xl text-sm transition-colors cursor-pointer flex items-center gap-2"
               >
-                {t.page5_complaint.startVoiceBtn}
+                <span>🎤 {t.page5_complaint.startVoiceBtn}</span>
               </button>
               <button
                 type="button"
@@ -191,7 +301,7 @@ export const ComplaintPage: React.FC = () => {
 
         {/* State 3: LISTENING (Microphone Owns Interaction) */}
         {state === 'LISTENING' && (
-          <div className="flex flex-col items-center text-center space-y-4 animate-fade-in">
+          <div className="flex flex-col items-center text-center space-y-4 animate-fade-in w-full max-w-lg">
             <div className="relative flex items-center justify-center">
               <div className="absolute w-28 h-28 rounded-full bg-[#2F7D73] opacity-20 animate-ping pointer-events-none" />
               <div className="w-24 h-24 rounded-full bg-[#2F7D73] text-white flex items-center justify-center shadow-lg">
@@ -206,7 +316,7 @@ export const ComplaintPage: React.FC = () => {
             </h3>
 
             {/* Pulsing Waveform Bars */}
-            <div className="flex items-center gap-1.5 h-10 my-2">
+            <div className="flex items-center gap-1.5 h-10 my-1">
               {[16, 28, 38, 22, 34, 18, 30, 14].map((h, i) => (
                 <div
                   key={i}
@@ -216,10 +326,22 @@ export const ComplaintPage: React.FC = () => {
               ))}
             </div>
 
+            {/* Live Interim Transcript */}
+            {liveTranscript ? (
+              <div className="w-full bg-[#F0FDF4] border border-[#86EFAC] rounded-xl px-4 py-2.5 text-sm text-[#166534] font-medium animate-fade-in">
+                <span className="font-bold text-xs uppercase block text-[#15803D] mb-0.5">Speaking:</span>
+                "{liveTranscript}"
+              </div>
+            ) : (
+              <p className="text-xs text-[#647471]">
+                Speak clearly into your microphone...
+              </p>
+            )}
+
             <button
               type="button"
               onClick={handleStartTyping}
-              className="text-xs text-[#647471] hover:text-[#2F7D73] underline cursor-pointer mt-2"
+              className="text-xs text-[#647471] hover:text-[#2F7D73] underline cursor-pointer mt-1"
             >
               Switch to typing instead
             </button>
@@ -246,9 +368,16 @@ export const ComplaintPage: React.FC = () => {
             </div>
 
             <div className="w-full bg-[#F6F8F7] border-2 border-[#2F7D73] rounded-2xl p-5 text-left shadow-xs">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#2F7D73] block mb-1">
-                {t.page5_complaint.youSaid}
-              </span>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#2F7D73]">
+                  {t.page5_complaint.youSaid}
+                </span>
+                {inputSource === 'voice_real' && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#DCEDEA] text-[#2F7D73]">
+                    ✓ Microphone Captured
+                  </span>
+                )}
+              </div>
               <p className="text-xl font-semibold text-[#243331] italic">
                 "{chiefComplaint}"
               </p>
@@ -307,7 +436,7 @@ export const ComplaintPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setState(chiefComplaint ? 'SUBMITTED' : 'IDLE')}
-                className="px-5 py-3 border border-[#D9E2DF] bg-white hover:bg-gray-50 text-[#647471] font-semibold rounded-xl text-base"
+                className="px-5 py-3 border border-[#D9E2DF] bg-white hover:bg-gray-50 text-[#647471] font-semibold rounded-xl text-base cursor-pointer"
               >
                 {t.common.cancel}
               </button>
@@ -315,7 +444,7 @@ export const ComplaintPage: React.FC = () => {
               <button
                 type="button"
                 onClick={handleStartVoice}
-                className="px-5 py-3 border border-[#2F7D73] text-[#2F7D73] hover:bg-[#DCEDEA] font-semibold rounded-xl text-base flex items-center gap-2"
+                className="px-5 py-3 border border-[#2F7D73] text-[#2F7D73] hover:bg-[#DCEDEA] font-semibold rounded-xl text-base flex items-center gap-2 cursor-pointer"
               >
                 <span>🎤 {t.page5_complaint.startVoiceBtn}</span>
               </button>
@@ -385,7 +514,7 @@ export const ComplaintPage: React.FC = () => {
       <div className="w-full flex items-center justify-between mt-auto pt-4 border-t border-[#D9E2DF]">
         <button
           type="button"
-          onClick={goBack}
+          onClick={handleBack}
           className="px-6 py-3.5 rounded-xl border border-[#D9E2DF] bg-white hover:bg-gray-50 text-base font-semibold text-[#243331] flex items-center gap-2 transition-colors cursor-pointer shadow-xs min-h-[48px]"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

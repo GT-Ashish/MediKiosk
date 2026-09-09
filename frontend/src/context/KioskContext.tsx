@@ -16,6 +16,7 @@ import {
   DEFAULT_CLINICAL_SUMMARY,
 } from '../data/mockData'
 import { getTranslations, type TranslationSchema } from '../i18n'
+import { stopSpeaking } from '../utils/speech'
 
 interface KioskContextType {
   // Navigation & View
@@ -86,10 +87,16 @@ export const KioskProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Toggle Mute for current page
   const toggleMute = useCallback(() => {
-    setIsMuted((prev) => !prev)
+    setIsMuted((prev) => {
+      if (!prev) {
+        stopSpeaking()
+      }
+      return !prev
+    })
   }, [])
 
   const goTo = useCallback((nextRoute: PageRoute) => {
+    stopSpeaking()
     setIsMuted(false) // Reset mute state when navigating to next page
     setRouteHistory((prev) => [...prev, nextRoute])
     setCurrentRoute(nextRoute)
@@ -97,6 +104,7 @@ export const KioskProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [])
 
   const goBack = useCallback(() => {
+    stopSpeaking()
     setIsMuted(false) // Reset mute state on back
     setRouteHistory((prev) => {
       if (prev.length <= 1) return prev
@@ -111,6 +119,7 @@ export const KioskProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Invalidate detailed questions and return to Page 5 when editing chief complaint
   const editChiefComplaintFlow = useCallback(() => {
+    stopSpeaking()
     setIsMuted(false)
     setHistoryAnswers({}) // Reset old detailed answers to avoid invalid history state
     setCurrentRoute('complaint')
@@ -118,6 +127,7 @@ export const KioskProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [])
 
   const resetKiosk = useCallback(() => {
+    stopSpeaking()
     setCurrentRoute('language')
     setRouteHistory(['language'])
     setSelectedLanguage(SUPPORTED_LANGUAGES[0])

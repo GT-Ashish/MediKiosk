@@ -1,7 +1,12 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { useKiosk } from '../../context/KioskContext'
 import { useInstructionPlayer } from '../../hooks/useInstructionPlayer'
 import { HearAgainButton } from '../../components/patient/HearAgainButton'
+import {
+  startSpeechRecognition,
+  stopSpeaking,
+  type SpeechRecognitionControls,
+} from '../../utils/speech'
 
 type KeyPointKey = 'onset' | 'location' | 'severity' | 'associated'
 
@@ -34,6 +39,7 @@ export const ReviewSummaryPage: React.FC = () => {
   const [voiceDraft, setVoiceDraft] = useState('')
   const [typedDraft, setTypedDraft] = useState('')
   const voiceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const recognitionControlsRef = useRef<SpeechRecognitionControls | null>(null)
 
   // Document preview modal
   const [viewingDoc, setViewingDoc] = useState<string | null>(null)
@@ -86,8 +92,30 @@ export const ReviewSummaryPage: React.FC = () => {
     editChiefComplaintFlow()
   }
 
+  const abortVoiceEditRecognition = () => {
+    if (recognitionControlsRef.current) {
+      try {
+        recognitionControlsRef.current.abort()
+      } catch {
+        // ignore
+      }
+      recognitionControlsRef.current = null
+    }
+  }
+
+  // Clean up timers & speech on unmount
+  useEffect(() => {
+    return () => {
+      if (voiceTimerRef.current) clearTimeout(voiceTimerRef.current)
+      abortVoiceEditRecognition()
+      stopSpeaking()
+    }
+  }, [])
+
   // Item 13: Edit Key Points (Voice + Type dual options)
   const handleOpenEditKeyPoint = (key: KeyPointKey, currentValue: string) => {
+    abortVoiceEditRecognition()
+    if (voiceTimerRef.current) clearTimeout(voiceTimerRef.current)
     setEditingKey(key)
     setEditMode('choose')
     setTypedDraft(currentValue)
@@ -97,31 +125,76 @@ export const ReviewSummaryPage: React.FC = () => {
   }
 
   const handleStartVoiceEdit = () => {
+    stopSpeaking()
+    abortVoiceEditRecognition()
+    if (voiceTimerRef.current) clearTimeout(voiceTimerRef.current)
+
     setEditMode('voice')
     setIsVoiceListening(true)
     setIsVoiceProcessing(false)
     setVoiceDraft('')
 
-    if (voiceTimerRef.current) clearTimeout(voiceTimerRef.current)
+    let hasReceivedFinal = false
 
-    // Simulate 2.5s listening
+    // Fallback timer (3.5s)
     voiceTimerRef.current = setTimeout(() => {
+      if (hasReceivedFinal) return
+      abortVoiceEditRecognition()
       setIsVoiceListening(false)
       setIsVoiceProcessing(true)
 
-      // Simulate 1s processing
       voiceTimerRef.current = setTimeout(() => {
         setIsVoiceProcessing(false)
         if (editingKey) {
-          // Provide an updated mock answer reflecting the edit
           const mockResult = `${t.page6_history.questions[editingKey].mockAnswer} (Updated)`
           setVoiceDraft(mockResult)
         }
-      }, 1000)
-    }, 2500)
+      }, 800)
+    }, 3500)
+
+    // Start real browser SpeechRecognition
+    const controls = startSpeechRecognition(selectedLanguage.code, {
+      onResult: (transcriptText, isFinal) => {
+        setVoiceDraft(transcriptText)
+
+        if (isFinal && transcriptText.trim()) {
+          hasReceivedFinal = true
+          if (voiceTimerRef.current) clearTimeout(voiceTimerRef.current)
+          abortVoiceEditRecognition()
+          setIsVoiceListening(false)
+          setIsVoiceProcessing(true)
+
+          voiceTimerRef.current = setTimeout(() => {
+            setIsVoiceProcessing(false)
+            setVoiceDraft(transcriptText.trim())
+          }, 700)
+        }
+      },
+      onEnd: (finalTranscript) => {
+        if (hasReceivedFinal) return
+        if (finalTranscript.trim()) {
+          hasReceivedFinal = true
+          if (voiceTimerRef.current) clearTimeout(voiceTimerRef.current)
+          setIsVoiceListening(false)
+          setIsVoiceProcessing(true)
+
+          voiceTimerRef.current = setTimeout(() => {
+            setIsVoiceProcessing(false)
+            setVoiceDraft(finalTranscript.trim())
+          }, 700)
+        }
+      },
+      onError: (err) => {
+        console.warn('[Review Key-Point Voice Edit Notice]:', err?.error || err)
+      },
+    })
+
+    recognitionControlsRef.current = controls
   }
 
   const handleSaveVoiceEdit = () => {
+    abortVoiceEditRecognition()
+    if (voiceTimerRef.current) clearTimeout(voiceTimerRef.current)
     if (editingKey && voiceDraft.trim()) {
       updateHistoryAnswer(editingKey, voiceDraft.trim())
       setEditingKey(null)
@@ -129,14 +202,17 @@ export const ReviewSummaryPage: React.FC = () => {
   }
 
   const handleStartTypeEdit = () => {
-    setEditMode('type')
+    abortVoiceEditRecognition()
     if (voiceTimerRef.current) clearTimeout(voiceTimerRef.current)
+    setEditMode('type')
     setIsVoiceListening(false)
     setIsVoiceProcessing(false)
   }
 
   const handleSaveTypeEdit = (e: React.FormEvent) => {
     e.preventDefault()
+    abortVoiceEditRecognition()
+    if (voiceTimerRef.current) clearTimeout(voiceTimerRef.current)
     if (editingKey && typedDraft.trim()) {
       updateHistoryAnswer(editingKey, typedDraft.trim())
       setEditingKey(null)
