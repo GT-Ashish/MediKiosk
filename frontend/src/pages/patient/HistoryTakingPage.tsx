@@ -1,126 +1,347 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { useKiosk } from '../../context/KioskContext'
-import { HISTORY_QUESTIONS } from '../../data/mockData'
 import { useInstructionPlayer } from '../../hooks/useInstructionPlayer'
-import { useVoiceInteraction } from '../../hooks/useVoiceInteraction'
 import { HearAgainButton } from '../../components/patient/HearAgainButton'
-import { VoiceWaveform } from '../../components/patient/VoiceWaveform'
+
+type QuestionKey = 'onset' | 'location' | 'severity' | 'associated'
+
+const QUESTION_KEYS: QuestionKey[] = ['onset', 'location', 'severity', 'associated']
 
 export const HistoryTakingPage: React.FC = () => {
-  const { setAnswerForQuestion, goTo, goBack } = useKiosk()
+  const {
+    t,
+    selectedLanguage,
+    isMuted,
+    setAnswerForQuestion,
+    historyAnswers,
+    goTo,
+    goBack,
+  } = useKiosk()
+
   const [questionIndex, setQuestionIndex] = useState(0)
+  const currentKey = QUESTION_KEYS[questionIndex]
+  const questionData = t.page6_history.questions[currentKey]
 
-  const currentQ = HISTORY_QUESTIONS[questionIndex]
-  const totalQuestions = HISTORY_QUESTIONS.length
+  const [isListening, setIsListening] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [currentAnswer, setCurrentAnswer] = useState<string>(
+    historyAnswers[currentKey] || ''
+  )
+  const [isTypingCustom, setIsTypingCustom] = useState(false)
+  const [customText, setCustomText] = useState('')
 
-  const instruction = `${currentQ.title} You can answer by speaking or by tapping an option on the screen.`
+  const voiceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const clearVoiceTimers = () => {
+    if (voiceTimerRef.current) {
+      clearTimeout(voiceTimerRef.current)
+      voiceTimerRef.current = null
+    }
+  }
+
+  // Audio instruction for current question
   const {
     status: instructionStatus,
     currentRepetition,
     totalRepetitions,
     isPlaying: isInstructionPlaying,
-    replay,
+    replay: replayInstruction,
+    stopPlayback,
   } = useInstructionPlayer({
-    instruction,
-    repeatCount: 2,
+    instruction: `${questionData.title} ${t.page6_history.dualInputHint}`,
+    repeatCount: 1,
     autoPlay: true,
+    langCode: selectedLanguage.code,
+    isMuted,
   })
 
-  // Automatic voice listening for this question
-  const {
-    status: voiceStatus,
-    statusMessage,
-    transcript,
-    startListening,
-  } = useVoiceInteraction({
-    autoStart: true,
-    defaultMockTranscript: currentQ.defaultAnswer,
-    onSuccess: (text) => {
-      setAnswerForQuestion(currentQ.id, currentQ.title, text)
-    },
-  })
+  // Sync state when advancing questions
+  useEffect(() => {
+    clearVoiceTimers()
+    setIsListening(false)
+    setIsProcessing(false)
+    setIsTypingCustom(false)
+    setCustomText('')
+    setCurrentAnswer(historyAnswers[currentKey] || '')
+  }, [questionIndex, currentKey, historyAnswers])
 
-  const advanceQuestion = (chosenAnswer: string) => {
-    setAnswerForQuestion(currentQ.id, currentQ.title, chosenAnswer)
-    if (questionIndex + 1 < totalQuestions) {
+  useEffect(() => {
+    return () => {
+      clearVoiceTimers()
+    }
+  }, [])
+
+  // Manual Voice Input Trigger
+  const handleStartVoice = () => {
+    stopPlayback()
+    setIsTypingCustom(false)
+    clearVoiceTimers()
+    setIsListening(true)
+    setIsProcessing(false)
+
+    // Simulate 2.5s listening
+    voiceTimerRef.current = setTimeout(() => {
+      setIsListening(false)
+      setIsProcessing(true)
+
+      // Simulate 1.2s processing
+      voiceTimerRef.current = setTimeout(() => {
+        setIsProcessing(false)
+        const mockVoiceResult = questionData.mockAnswer
+        setCurrentAnswer(mockVoiceResult)
+        setAnswerForQuestion(currentKey, questionData.title, mockVoiceResult)
+      }, 1200)
+    }, 2500)
+  }
+
+  // Touch Option Selection
+  const handleSelectOption = (optionLabel: string) => {
+    stopPlayback()
+    clearVoiceTimers()
+    setIsListening(false)
+    setIsProcessing(false)
+    setIsTypingCustom(false)
+    setCurrentAnswer(optionLabel)
+    setAnswerForQuestion(currentKey, questionData.title, optionLabel)
+  }
+
+  // Skip / Not Sure
+  const handleSkip = () => {
+    stopPlayback()
+    clearVoiceTimers()
+    setIsListening(false)
+    const skipLabel = t.common.skip
+    setCurrentAnswer(skipLabel)
+    setAnswerForQuestion(currentKey, questionData.title, skipLabel)
+    advanceNext(skipLabel)
+  }
+
+  // Submit custom typed answer
+  const handleSubmitCustom = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (customText.trim()) {
+      setCurrentAnswer(customText.trim())
+      setAnswerForQuestion(currentKey, questionData.title, customText.trim())
+      setIsTypingCustom(false)
+    }
+  }
+
+  const advanceNext = (overrideAnswer?: string) => {
+    const finalAnswer = overrideAnswer || currentAnswer
+    if (finalAnswer) {
+      setAnswerForQuestion(currentKey, questionData.title, finalAnswer)
+    }
+
+    if (questionIndex + 1 < QUESTION_KEYS.length) {
       setQuestionIndex((prev) => prev + 1)
     } else {
       goTo('documents')
     }
   }
 
-  const handleSkip = () => {
-    advanceQuestion('Not sure / Skipped')
+  const handlePreviousQuestion = () => {
+    if (questionIndex > 0) {
+      setQuestionIndex((prev) => prev - 1)
+    } else {
+      goBack()
+    }
   }
 
+  const optionsList = Object.values(questionData.options)
+
   return (
-    <div className="flex flex-col items-center justify-between min-h-[calc(100vh-140px)] max-w-2xl mx-auto px-4 py-6">
-      {/* Question Counter & Heading */}
-      <div className="text-center my-2">
-        <span className="text-xs uppercase font-bold tracking-widest text-[#2F7D73] bg-[#DCEDEA] px-3 py-1 rounded-full">
-          Question {questionIndex + 1} of {totalQuestions}
+    <div className="flex flex-col items-center justify-between min-h-[calc(100vh-140px)] max-w-4xl w-full mx-auto px-6 py-6 select-none">
+      {/* Question Counter & Header - Desktop First */}
+      <div className="text-center my-2 max-w-2xl">
+        <span className="text-xs uppercase font-bold tracking-widest text-[#2F7D73] bg-[#DCEDEA] px-3.5 py-1 rounded-full">
+          Question {questionIndex + 1} of {QUESTION_KEYS.length}
         </span>
         <h2 className="text-3xl sm:text-4xl font-bold text-[#243331] mt-2 mb-1 tracking-tight">
-          {currentQ.title}
+          {questionData.title}
         </h2>
         <p className="text-base sm:text-lg text-[#647471] font-medium">
-          {currentQ.subtitle}
+          {questionData.subtitle}
         </p>
       </div>
 
-      {/* Voice Listening Waveform Area */}
-      <div className="w-full my-2">
-        <VoiceWaveform
-          status={voiceStatus}
-          statusMessage={statusMessage}
-          transcript={transcript}
-          onStartListening={startListening}
-          onManualSubmit={(text) => advanceQuestion(text)}
-          fallbackPlaceholder="Or type custom response here..."
-        />
-      </div>
+      {/* Main Card (Desktop-First Wide Viewport) */}
+      <div className="w-full bg-white border border-[#D9E2DF] rounded-3xl p-6 sm:p-8 shadow-sm my-3 space-y-6">
+        {/* Top: Voice & Manual Speak Trigger */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-[#F9FBFA] rounded-2xl border border-[#D9E2DF]">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-[#DCEDEA] text-[#2F7D73] flex items-center justify-center flex-shrink-0">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+              </svg>
+            </div>
+            <div>
+              <h4 className="text-base font-bold text-[#243331]">
+                {t.page6_history.startVoiceBtn}
+              </h4>
+              <p className="text-xs text-[#647471]">
+                {isListening
+                  ? t.page6_history.listening
+                  : isProcessing
+                  ? t.page6_history.processing
+                  : 'Tap to speak your answer'}
+              </p>
+            </div>
+          </div>
 
-      {/* Touch Options Grid (Dual-mode input: Tap OR Speak) */}
-      <div className="w-full my-3">
-        <p className="text-xs font-bold uppercase tracking-wider text-[#647471] text-center mb-3">
-          Or Tap an Option Below:
-        </p>
-        <div className="grid grid-cols-2 gap-3 w-full">
-          {currentQ.options.map((opt) => (
+          <div className="flex items-center gap-2">
+            {isListening ? (
+              <div className="flex items-center gap-2 px-4 py-2 bg-[#E8F4F1] border border-[#2F7D73] text-[#2F7D73] rounded-xl text-sm font-bold animate-pulse">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#2F7D73]" />
+                <span>{t.page6_history.listening}</span>
+              </div>
+            ) : isProcessing ? (
+              <div className="flex items-center gap-2 px-4 py-2 bg-[#EFF6FF] border border-[#2563EB] text-[#2563EB] rounded-xl text-sm font-bold animate-pulse">
+                <span>{t.page6_history.processing}</span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={handleStartVoice}
+                className="px-5 py-2.5 bg-[#2F7D73] hover:bg-[#276B63] text-white font-bold rounded-xl text-sm shadow-xs transition-colors cursor-pointer flex items-center gap-2"
+              >
+                <span>🎤 {t.page6_history.startVoiceBtn}</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Display Captured Answer if available */}
+        {currentAnswer && (
+          <div className="p-4 bg-[#EBF4EE] border-2 border-[#4F8A6D] rounded-2xl flex items-center justify-between gap-4 animate-fade-in">
+            <div>
+              <span className="text-xs font-bold uppercase tracking-wider text-[#4F8A6D] block mb-0.5">
+                Selected Answer:
+              </span>
+              <p className="text-lg font-bold text-[#243331]">
+                "{currentAnswer}"
+              </p>
+            </div>
             <button
-              key={opt.id}
               type="button"
-              onClick={() => advanceQuestion(opt.label)}
-              className="py-4 px-5 bg-[#FFFFFF] border-2 border-[#D9E2DF] hover:border-[#2F7D73] hover:bg-[#F9FBFA] active:bg-[#DCEDEA] rounded-2xl text-base sm:text-lg font-bold text-[#243331] shadow-xs hover:shadow-sm transition-all cursor-pointer text-center min-h-[56px] flex items-center justify-center"
+              onClick={() => setCurrentAnswer('')}
+              className="text-xs font-semibold text-[#647471] hover:text-[#B85C5C] px-3 py-1.5 rounded-lg border border-[#D9E2DF] bg-white cursor-pointer"
             >
-              {opt.label}
+              Clear
             </button>
-          ))}
+          </div>
+        )}
+
+        {/* Center: Touch Options Grid (2x2) */}
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wider text-[#647471] mb-3">
+            {t.page6_history.orTapBelow}
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            {optionsList.map((label, idx) => {
+              const isSelected = currentAnswer === label
+
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => handleSelectOption(label)}
+                  className={`py-4 px-6 rounded-2xl border-2 text-base sm:text-lg font-bold transition-all cursor-pointer text-left flex items-center justify-between ${
+                    isSelected
+                      ? 'bg-[#EBF4EE] border-[#4F8A6D] text-[#243331] shadow-xs'
+                      : 'bg-[#FFFFFF] border-[#D9E2DF] hover:border-[#2F7D73] hover:bg-[#F9FBFA] text-[#243331]'
+                  }`}
+                >
+                  <span>{label}</span>
+                  <div
+                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                      isSelected
+                        ? 'bg-[#4F8A6D] border-[#4F8A6D] text-white'
+                        : 'border-[#D9E2DF] bg-white'
+                    }`}
+                  >
+                    {isSelected && (
+                      <svg className="w-3.5 h-3.5 stroke-current stroke-3" fill="none" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Custom Typing Fallback toggle */}
+        <div className="pt-1">
+          {isTypingCustom ? (
+            <form onSubmit={handleSubmitCustom} className="flex gap-2">
+              <input
+                type="text"
+                value={customText}
+                onChange={(e) => setCustomText(e.target.value)}
+                placeholder={t.page6_history.typePlaceholder}
+                className="flex-1 px-4 py-3 border border-[#D9E2DF] rounded-xl text-base text-[#243331] outline-none focus:border-[#2F7D73]"
+                autoFocus
+              />
+              <button
+                type="submit"
+                className="px-5 py-3 bg-[#4F8A6D] text-white font-bold rounded-xl text-sm"
+              >
+                {t.common.save}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsTypingCustom(false)}
+                className="px-4 py-3 border border-[#D9E2DF] text-[#647471] rounded-xl text-sm"
+              >
+                {t.common.cancel}
+              </button>
+            </form>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setIsTypingCustom(true)}
+              className="text-xs font-semibold text-[#647471] hover:text-[#2F7D73] flex items-center gap-1.5 cursor-pointer"
+            >
+              <span>⌨ {t.page6_history.typePlaceholder}</span>
+            </button>
+          )}
+        </div>
+
+        {/* Prominent Skip / Not Sure Button (Section 19: Made large & noticeable!) */}
+        <div className="pt-2 border-t border-[#EBF0EE] flex justify-center">
+          <button
+            type="button"
+            onClick={handleSkip}
+            className="w-full sm:w-auto px-8 py-3.5 rounded-2xl border-2 border-[#D9E2DF] bg-[#F6F8F7] hover:bg-[#E2E8F0] active:bg-[#CBD5E1] text-[#647471] hover:text-[#243331] font-bold text-base transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-xs min-h-[48px]"
+          >
+            <svg className="w-5 h-5 text-[#647471]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+            </svg>
+            <span>{t.page6_history.skipNotSure}</span>
+          </button>
         </div>
       </div>
 
-      {/* Bottom Bar: Back + Hear Again + Skip */}
+      {/* Bottom Bar: Back + Hear Again + Next */}
       <div className="w-full flex items-center justify-between mt-auto pt-4 border-t border-[#D9E2DF]">
         <button
           type="button"
-          onClick={() => {
-            if (questionIndex > 0) {
-              setQuestionIndex((prev) => prev - 1)
-            } else {
-              goBack()
-            }
-          }}
-          className="px-5 py-3 rounded-xl border border-[#D9E2DF] bg-white hover:bg-gray-50 text-base font-semibold text-[#243331] flex items-center gap-2 transition-colors cursor-pointer shadow-xs min-h-[48px]"
+          onClick={handlePreviousQuestion}
+          className="px-6 py-3.5 rounded-xl border border-[#D9E2DF] bg-white hover:bg-gray-50 text-base font-semibold text-[#243331] flex items-center gap-2 transition-colors cursor-pointer shadow-xs min-h-[48px]"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
           </svg>
-          <span>Back</span>
+          <span>{t.common.back}</span>
         </button>
 
         <HearAgainButton
-          onHearAgain={replay}
+          onHearAgain={() => {
+            clearVoiceTimers()
+            setIsListening(false)
+            replayInstruction()
+          }}
           status={instructionStatus}
           currentRepetition={currentRepetition}
           totalRepetitions={totalRepetitions}
@@ -129,10 +350,14 @@ export const HistoryTakingPage: React.FC = () => {
 
         <button
           type="button"
-          onClick={handleSkip}
-          className="px-4 py-2.5 rounded-xl text-sm font-semibold text-[#647471] hover:text-[#243331] hover:bg-gray-100 transition-colors cursor-pointer"
+          onClick={() => advanceNext()}
+          disabled={!currentAnswer}
+          className="px-8 py-3.5 bg-[#4F8A6D] hover:bg-[#3E6E56] disabled:opacity-40 active:bg-[#335B47] text-white font-bold text-base rounded-xl shadow-md flex items-center gap-2 transition-all cursor-pointer min-h-[48px]"
         >
-          Skip (If not sure)
+          <span>{t.common.next}</span>
+          <svg className="w-5 h-5 stroke-current stroke-2" fill="none" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+          </svg>
         </button>
       </div>
     </div>

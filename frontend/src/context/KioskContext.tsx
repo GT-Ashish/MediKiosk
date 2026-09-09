@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useMemo } from 'react'
+import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react'
 import type {
   PageRoute,
   SupportedLanguage,
@@ -15,6 +15,7 @@ import {
   INITIAL_DOCUMENTS,
   DEFAULT_CLINICAL_SUMMARY,
 } from '../data/mockData'
+import { getTranslations, type TranslationSchema } from '../i18n'
 
 interface KioskContextType {
   // Navigation & View
@@ -25,6 +26,13 @@ interface KioskContextType {
   goTo: (route: PageRoute) => void
   goBack: () => void
   resetKiosk: () => void
+
+  // Translations
+  t: TranslationSchema
+
+  // Mute Control (Resets per page)
+  isMuted: boolean
+  toggleMute: () => void
 
   // Patient Data State
   selectedLanguage: SupportedLanguage
@@ -39,6 +47,8 @@ interface KioskContextType {
   setChiefComplaint: (complaint: string) => void
   historyAnswers: Record<string, string>
   setAnswerForQuestion: (questionId: string, questionText: string, answer: string) => void
+  updateHistoryAnswer: (questionId: string, answer: string) => void
+  editChiefComplaintFlow: () => void
   selectedPreviousVisit: PreviousVisitRecord | null
   setSelectedPreviousVisit: (visit: PreviousVisitRecord | null) => void
   documents: MedicalDocument[]
@@ -55,29 +65,39 @@ export const KioskProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [routeHistory, setRouteHistory] = useState<PageRoute[]>(['language'])
   const [appMode, setAppMode] = useState<'kiosk' | 'doctor'>('kiosk')
 
+  // Mute state - starts unmuted, resets on page transition
+  const [isMuted, setIsMuted] = useState<boolean>(false)
+
   const [selectedLanguage, setSelectedLanguage] = useState<SupportedLanguage>(SUPPORTED_LANGUAGES[0])
   const [consentGiven, setConsentGiven] = useState<boolean | null>(null)
   const [patient, setPatient] = useState<PatientProfile>(DEFAULT_PATIENT)
   const [visitType, setVisitType] = useState<VisitType>('new_problem')
-  const [chiefComplaint, setChiefComplaint] = useState<string>('I have had stomach pain for three days.')
-  const [historyAnswers, setHistoryAnswers] = useState<Record<string, string>>({
-    onset: 'Few days ago (3 days)',
-    location: 'Lower abdominal region',
-    severity: 'Moderate severity',
-    associated: 'No vomiting, mild loss of appetite',
-  })
+  const [chiefComplaint, setChiefComplaint] = useState<string>('')
+  const [historyAnswers, setHistoryAnswers] = useState<Record<string, string>>({})
   const [selectedPreviousVisit, setSelectedPreviousVisit] = useState<PreviousVisitRecord | null>(PREVIOUS_VISITS[0])
   const [documents, setDocuments] = useState<MedicalDocument[]>(INITIAL_DOCUMENTS)
   const [clinicalSummary, setClinicalSummary] = useState<ClinicalSummaryDraft>(DEFAULT_CLINICAL_SUMMARY)
   const tokenNumber = 'A 102'
 
+  // Dynamic translations based on selected language
+  const t = useMemo(() => {
+    return getTranslations(selectedLanguage.code)
+  }, [selectedLanguage.code])
+
+  // Toggle Mute for current page
+  const toggleMute = useCallback(() => {
+    setIsMuted((prev) => !prev)
+  }, [])
+
   const goTo = useCallback((nextRoute: PageRoute) => {
+    setIsMuted(false) // Reset mute state when navigating to next page
     setRouteHistory((prev) => [...prev, nextRoute])
     setCurrentRoute(nextRoute)
     window.scrollTo(0, 0)
   }, [])
 
   const goBack = useCallback(() => {
+    setIsMuted(false) // Reset mute state on back
     setRouteHistory((prev) => {
       if (prev.length <= 1) return prev
       const newHistory = [...prev]
@@ -89,22 +109,26 @@ export const KioskProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     })
   }, [])
 
+  // Invalidate detailed questions and return to Page 5 when editing chief complaint
+  const editChiefComplaintFlow = useCallback(() => {
+    setIsMuted(false)
+    setHistoryAnswers({}) // Reset old detailed answers to avoid invalid history state
+    setCurrentRoute('complaint')
+    window.scrollTo(0, 0)
+  }, [])
+
   const resetKiosk = useCallback(() => {
     setCurrentRoute('language')
     setRouteHistory(['language'])
     setSelectedLanguage(SUPPORTED_LANGUAGES[0])
     setConsentGiven(null)
     setVisitType('new_problem')
-    setChiefComplaint('I have had stomach pain for three days.')
-    setHistoryAnswers({
-      onset: 'Few days ago (3 days)',
-      location: 'Lower abdominal region',
-      severity: 'Moderate severity',
-      associated: 'No vomiting, mild loss of appetite',
-    })
+    setChiefComplaint('')
+    setHistoryAnswers({})
     setSelectedPreviousVisit(PREVIOUS_VISITS[0])
     setDocuments(INITIAL_DOCUMENTS)
     setClinicalSummary(DEFAULT_CLINICAL_SUMMARY)
+    setIsMuted(false)
     window.scrollTo(0, 0)
   }, [])
 
@@ -112,6 +136,13 @@ export const KioskProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setHistoryAnswers((prev) => ({
       ...prev,
       [_questionId]: answer,
+    }))
+  }, [])
+
+  const updateHistoryAnswer = useCallback((questionId: string, answer: string) => {
+    setHistoryAnswers((prev) => ({
+      ...prev,
+      [questionId]: answer,
     }))
   }, [])
 
@@ -123,6 +154,13 @@ export const KioskProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setClinicalSummary((prev) => ({ ...prev, ...summary }))
   }, [])
 
+  // Sync initial chief complaint in selected language if empty
+  useEffect(() => {
+    if (!chiefComplaint) {
+      setChiefComplaint(t.page5_complaint.mockTranscript)
+    }
+  }, [chiefComplaint, t.page5_complaint.mockTranscript])
+
   const value = useMemo(
     () => ({
       currentRoute,
@@ -132,6 +170,9 @@ export const KioskProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       goTo,
       goBack,
       resetKiosk,
+      t,
+      isMuted,
+      toggleMute,
       selectedLanguage,
       setSelectedLanguage,
       consentGiven,
@@ -144,6 +185,8 @@ export const KioskProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setChiefComplaint,
       historyAnswers,
       setAnswerForQuestion,
+      updateHistoryAnswer,
+      editChiefComplaintFlow,
       selectedPreviousVisit,
       setSelectedPreviousVisit,
       documents,
@@ -159,6 +202,9 @@ export const KioskProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       goTo,
       goBack,
       resetKiosk,
+      t,
+      isMuted,
+      toggleMute,
       selectedLanguage,
       consentGiven,
       patient,
@@ -166,6 +212,8 @@ export const KioskProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       chiefComplaint,
       historyAnswers,
       setAnswerForQuestion,
+      updateHistoryAnswer,
+      editChiefComplaintFlow,
       selectedPreviousVisit,
       documents,
       addDocument,

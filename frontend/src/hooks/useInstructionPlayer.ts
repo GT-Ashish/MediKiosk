@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { InstructionStatus } from '../types'
-
-const REPLAY_REMINDER = 'To hear this instruction again, press the blue Hear Again button at the bottom.'
+import { getReplayReminder } from '../i18n'
 
 interface UseInstructionPlayerProps {
   instruction: string
-  repeatCount?: number // Usually 2 or 3
+  repeatCount?: number // Usually 1, 2 or 3
   autoPlay?: boolean
-  languageCode?: string
+  langCode?: string
+  isMuted?: boolean
+  onComplete?: () => void
 }
 
 interface UseInstructionPlayerReturn {
@@ -18,152 +19,142 @@ interface UseInstructionPlayerReturn {
   isPlaying: boolean
   currentSpokenText: string
   replay: () => void
+  stopPlayback: () => void
 }
 
 export function useInstructionPlayer({
   instruction,
   repeatCount = 2,
   autoPlay = true,
-  languageCode = 'en-US',
+  langCode = 'en',
+  isMuted = false,
+  onComplete,
 }: UseInstructionPlayerProps): UseInstructionPlayerReturn {
   const [status, setStatus] = useState<InstructionStatus>('IDLE')
   const [currentRepetition, setCurrentRepetition] = useState<number>(1)
   const isPlayingRef = useRef<boolean>(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const activeUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
   const playRepetitionRef = useRef<(repIndex: number) => void>(() => {})
 
   const isFinalRepetition = currentRepetition === repeatCount
+  const replayReminder = getReplayReminder(langCode)
 
-  // The spoken text: normal instruction on initial repeats, with reminder on the final repeat
+  // Spoken text: normal instruction on initial repeats, with reminder on final repeat
   const currentSpokenText = isFinalRepetition
-    ? `${instruction} ${REPLAY_REMINDER}`
+    ? `${instruction} ${replayReminder}`
     : instruction
 
-  const stopAllPlayback = useCallback(() => {
+  const stopPlayback = useCallback(() => {
     if (timerRef.current) {
       clearTimeout(timerRef.current)
       timerRef.current = null
     }
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      try {
-        window.speechSynthesis.cancel()
-      } catch {
-        // Silently handle if speech synthesis fails
-      }
-    }
     isPlayingRef.current = false
+    setStatus('COMPLETED')
   }, [])
 
-  const fallbackTimerSimulation = useCallback(
+  const simulateSpeech = useCallback(
     (repIndex: number, textLength: number) => {
-      // Approximate speaking duration: ~55ms per character, minimum 2.5s
-      const simulatedDuration = Math.max(2500, textLength * 55)
+      // If muted, do not play audio simulation; complete immediately
+      if (isMuted) {
+        isPlayingRef.current = false
+        setStatus('COMPLETED')
+        if (onComplete) onComplete()
+        return
+      }
+
+      // Calm clinical speaking duration simulation: ~40ms per char, min 2000ms
+      const simulatedDuration = Math.max(2000, textLength * 40)
 
       timerRef.current = setTimeout(() => {
         if (!isPlayingRef.current) return
+
         if (repIndex < repeatCount) {
+          // Pause between repetitions
           timerRef.current = setTimeout(() => {
             playRepetitionRef.current(repIndex + 1)
-          }, 800)
+          }, 700)
         } else {
+          // Final repetition complete — STOP cleanly
           isPlayingRef.current = false
           setStatus('COMPLETED')
+          if (onComplete) {
+            onComplete()
+          }
         }
       }, simulatedDuration)
     },
-    [repeatCount],
+    [repeatCount, isMuted, onComplete],
   )
 
   const playRepetition = useCallback(
     (repIndex: number) => {
-      stopAllPlayback()
+      if (timerRef.current) {
+        clearTimeout(timerRef.current)
+        timerRef.current = null
+      }
+
+      if (isMuted) {
+        isPlayingRef.current = false
+        setStatus('COMPLETED')
+        if (onComplete) onComplete()
+        return
+      }
 
       const isFinal = repIndex === repeatCount
       setCurrentRepetition(repIndex)
       setStatus(isFinal ? 'FINAL_REPETITION' : 'PLAYING')
       isPlayingRef.current = true
 
-      const textToSpeak = isFinal ? `${instruction} ${REPLAY_REMINDER}` : instruction
-
-      // Try browser Web Speech API
-      const hasSpeechSynth = typeof window !== 'undefined' && 'speechSynthesis' in window
-
-      if (hasSpeechSynth) {
-        try {
-          const utterance = new SpeechSynthesisUtterance(textToSpeak)
-          utterance.lang = languageCode
-          utterance.rate = 0.92 // Calm clinical pace
-          utterance.pitch = 1.0
-
-          activeUtteranceRef.current = utterance
-
-          utterance.onend = () => {
-            if (!isPlayingRef.current) return
-            if (repIndex < repeatCount) {
-              timerRef.current = setTimeout(() => {
-                playRepetitionRef.current(repIndex + 1)
-              }, 900)
-            } else {
-              isPlayingRef.current = false
-              setStatus('COMPLETED')
-            }
-          }
-
-          utterance.onerror = () => {
-            fallbackTimerSimulation(repIndex, textToSpeak.length)
-          }
-
-          window.speechSynthesis.speak(utterance)
-          return
-        } catch {
-          // Continue to fallback simulation
-        }
-      }
-
-      fallbackTimerSimulation(repIndex, textToSpeak.length)
+      const textToSimulate = isFinal ? `${instruction} ${replayReminder}` : instruction
+      simulateSpeech(repIndex, textToSimulate.length)
     },
-    [instruction, repeatCount, languageCode, stopAllPlayback, fallbackTimerSimulation],
+    [instruction, repeatCount, replayReminder, isMuted, simulateSpeech, onComplete],
   )
 
-  // Keep ref up to date
   useEffect(() => {
     playRepetitionRef.current = playRepetition
   }, [playRepetition])
 
   // Restart the complete instruction loop from repetition 1
   const replay = useCallback(() => {
-    stopAllPlayback()
+    if (timerRef.current) {
+      clearTimeout(timerRef.current)
+      timerRef.current = null
+    }
     setStatus('REPLAYING')
     setCurrentRepetition(1)
     setTimeout(() => {
       playRepetition(1)
-    }, 100)
-  }, [playRepetition, stopAllPlayback])
+    }, 80)
+  }, [playRepetition])
 
   // Automatically start playback on mount or when instruction changes
   useEffect(() => {
-    if (autoPlay && instruction) {
+    if (autoPlay && instruction && !isMuted) {
       const startTimer = setTimeout(() => {
         playRepetition(1)
-      }, 400)
+      }, 350)
       return () => {
         clearTimeout(startTimer)
-        stopAllPlayback()
+        if (timerRef.current) clearTimeout(timerRef.current)
       }
+    } else if (isMuted) {
+      stopPlayback()
     }
     return () => {
-      stopAllPlayback()
+      if (timerRef.current) clearTimeout(timerRef.current)
     }
-  }, [instruction, autoPlay, playRepetition, stopAllPlayback])
+  }, [instruction, autoPlay, isMuted, playRepetition, stopPlayback])
 
   return {
     status,
     currentRepetition,
     totalRepetitions: repeatCount,
     isFinalRepetition,
-    isPlaying: status === 'PLAYING' || status === 'FINAL_REPETITION' || status === 'REPLAYING',
+    isPlaying: (status === 'PLAYING' || status === 'FINAL_REPETITION' || status === 'REPLAYING') && !isMuted,
     currentSpokenText,
     replay,
+    stopPlayback,
   }
 }
