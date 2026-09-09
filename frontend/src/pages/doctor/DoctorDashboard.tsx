@@ -104,7 +104,11 @@ export const DoctorDashboard: React.FC = () => {
             {/* Switch back to Kiosk Mode */}
             <button
               type="button"
-              onClick={() => setAppMode('kiosk')}
+              onClick={() => {
+                setAppMode('kiosk')
+                window.history.pushState({}, '', '/')
+                window.dispatchEvent(new PopStateEvent('popstate'))
+              }}
               className="px-3.5 py-1.5 bg-[#2F7D73] hover:bg-[#276B63] text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

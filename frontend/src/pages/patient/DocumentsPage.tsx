@@ -1,16 +1,14 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { useKiosk } from '../../context/KioskContext'
 import type { MedicalDocument } from '../../types'
 import { useInstructionPlayer } from '../../hooks/useInstructionPlayer'
 import { HearAgainButton } from '../../components/patient/HearAgainButton'
 
 export const DocumentsPage: React.FC = () => {
-  const { documents, addDocument, goTo, goBack } = useKiosk()
+  const { documents, addDocument, goTo, goBack, t, isMuted, selectedLanguage } = useKiosk()
   const [isScanning, setIsScanning] = useState(false)
   const [scanProgress, setScanProgress] = useState('')
-
-  const instruction =
-    'Do you have any medical documents to add? You can scan prescriptions, lab reports, or upload them from USB, or press Next to continue.'
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   const {
     status,
@@ -19,14 +17,17 @@ export const DocumentsPage: React.FC = () => {
     isPlaying,
     replay,
   } = useInstructionPlayer({
-    instruction,
+    instruction: t.page7_documents.instruction,
     repeatCount: 2,
     autoPlay: true,
+    langCode: selectedLanguage.code,
+    isMuted,
   })
 
+  // 1. Scanner Simulation
   const handleSimulateScanner = () => {
     setIsScanning(true)
-    setScanProgress('Initializing kiosk document scanner...')
+    setScanProgress(t.page7_documents.scanningNotice)
 
     setTimeout(() => {
       setScanProgress('Scanning prescription page 1...')
@@ -46,9 +47,10 @@ export const DocumentsPage: React.FC = () => {
     }, 1200)
   }
 
+  // 2. USB Simulation
   const handleSimulateUSB = () => {
     setIsScanning(true)
-    setScanProgress('Reading USB drive...')
+    setScanProgress(t.page7_documents.usbNotice)
 
     setTimeout(() => {
       setScanProgress('Importing X-Ray Chest PA View.jpg...')
@@ -68,65 +70,115 @@ export const DocumentsPage: React.FC = () => {
     }, 1000)
   }
 
+  // 3. Native PC Upload via Browser File Picker (Item 9)
+  const handleTriggerPCUpload = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+      fileInputRef.current.click()
+    }
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      const formattedSize =
+        file.size > 1024 * 1024
+          ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+          : `${Math.max(1, Math.round(file.size / 1024))} KB`
+      const isPdf = file.name.toLowerCase().endsWith('.pdf')
+      const newDoc: MedicalDocument = {
+        id: `doc-${Date.now()}`,
+        title: file.name,
+        type: isPdf ? 'prescription' : 'lab_report',
+        date: 'Today',
+        size: formattedSize,
+        status: 'verified',
+      }
+      addDocument(newDoc)
+    }
+  }
+
   return (
-    <div className="flex flex-col items-center justify-between min-h-[calc(100vh-140px)] max-w-2xl mx-auto px-4 py-6">
-      {/* Heading */}
-      <div className="text-center my-2">
+    <div className="flex flex-col items-center justify-between min-h-[calc(100vh-140px)] max-w-4xl w-full mx-auto px-6 py-6 select-none">
+      {/* Hidden browser file input for Upload from PC */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        accept=".pdf,.jpg,.jpeg,.png"
+        className="hidden"
+      />
+
+      {/* Heading - Desktop First */}
+      <div className="text-center my-2 max-w-2xl">
         <h2 className="text-3xl sm:text-4xl font-bold text-[#243331] mb-2 tracking-tight">
-          Do you have any medical documents to add?
+          {t.page7_documents.title}
         </h2>
         <p className="text-base sm:text-lg text-[#647471] font-medium">
-          You can upload prescriptions, lab reports, X-rays or discharge summaries.
+          {t.page7_documents.subtitle}
         </p>
       </div>
 
-      {/* Main Scanner Card (matching storyboard) */}
+      {/* Main Scanner & Upload Card (Desktop-First Wide Card) */}
       <div className="w-full my-4">
         <div className="w-full bg-[#FFFFFF] border-2 border-dashed border-[#D9E2DF] hover:border-[#2F7D73] rounded-3xl p-6 sm:p-8 text-center transition-all">
-          {/* Document Icon in soft blue/teal */}
-          <div className="w-16 h-16 rounded-2xl bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center mx-auto mb-3">
+          {/* Document Icon in soft blue */}
+          <div className="w-16 h-16 rounded-2xl bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center mx-auto mb-3 shadow-xs">
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
           </div>
 
           <h3 className="text-xl sm:text-2xl font-bold text-[#243331] mb-1">
-            Scan or upload documents
+            {t.page7_documents.cardTitle}
           </h3>
           <p className="text-sm text-[#647471] mb-2">
-            Tap to upload or use the kiosk scanner
+            {t.page7_documents.cardSubtitle}
           </p>
-          <span className="inline-block text-xs font-semibold px-2.5 py-1 bg-[#F6F8F7] text-[#647471] rounded-full border border-[#D9E2DF]">
-            Supported formats: PDF, JPG, PNG
+          <span className="inline-block text-xs font-semibold px-3 py-1 bg-[#F6F8F7] text-[#647471] rounded-full border border-[#D9E2DF]">
+            {t.page7_documents.supportedFormats}
           </span>
 
-          {/* Scanner / USB Action Buttons */}
-          <div className="grid grid-cols-2 gap-4 mt-6">
-            {/* Use Scanner Button */}
+          {/* 3 Action Buttons: Scanner, PC Upload, USB */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+            {/* 1. Use Scanner Button */}
             <button
               type="button"
               onClick={handleSimulateScanner}
               disabled={isScanning}
-              className="py-4 px-4 bg-[#FFFFFF] border-2 border-[#D9E2DF] hover:border-[#2F7D73] hover:bg-[#F9FBFA] active:bg-[#DCEDEA] text-[#243331] font-bold rounded-2xl flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-50"
+              className="py-4 px-4 bg-[#FFFFFF] border-2 border-[#D9E2DF] hover:border-[#2F7D73] hover:bg-[#F9FBFA] active:bg-[#DCEDEA] text-[#243331] font-bold rounded-2xl flex items-center justify-center gap-2.5 shadow-xs transition-all cursor-pointer disabled:opacity-50"
             >
               <svg className="w-5 h-5 text-[#2F7D73]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
               </svg>
-              <span>Use Scanner</span>
+              <span>{t.page7_documents.useScanner}</span>
             </button>
 
-            {/* Upload from USB Button */}
+            {/* 2. Upload from PC (Item 9: Native file picker) */}
+            <button
+              type="button"
+              onClick={handleTriggerPCUpload}
+              disabled={isScanning}
+              className="py-4 px-4 bg-[#FFFFFF] border-2 border-[#2F7D73] bg-[#E8F4F1] hover:bg-[#DCEDEA] text-[#2F7D73] font-bold rounded-2xl flex items-center justify-center gap-2.5 shadow-xs transition-all cursor-pointer disabled:opacity-50"
+            >
+              <svg className="w-5 h-5 text-[#2F7D73]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+              <span>{t.page7_documents.uploadPC}</span>
+            </button>
+
+            {/* 3. Upload from USB Button */}
             <button
               type="button"
               onClick={handleSimulateUSB}
               disabled={isScanning}
-              className="py-4 px-4 bg-[#FFFFFF] border-2 border-[#D9E2DF] hover:border-[#2563EB] hover:bg-[#F9FBFA] active:bg-[#EFF6FF] text-[#243331] font-bold rounded-2xl flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-50"
+              className="py-4 px-4 bg-[#FFFFFF] border-2 border-[#D9E2DF] hover:border-[#2563EB] hover:bg-[#F9FBFA] active:bg-[#EFF6FF] text-[#243331] font-bold rounded-2xl flex items-center justify-center gap-2.5 shadow-xs transition-all cursor-pointer disabled:opacity-50"
             >
               <svg className="w-5 h-5 text-[#2563EB]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v14" />
               </svg>
-              <span>Upload from USB</span>
+              <span>{t.page7_documents.uploadUSB}</span>
             </button>
           </div>
 
@@ -143,15 +195,15 @@ export const DocumentsPage: React.FC = () => {
         {documents.length > 0 && (
           <div className="mt-4 space-y-2">
             <p className="text-xs font-bold uppercase tracking-wider text-[#647471] px-1">
-              Uploaded Documents ({documents.length}):
+              {t.page7_documents.uploadedTitle} ({documents.length}):
             </p>
             {documents.map((doc) => (
               <div
                 key={doc.id}
-                className="flex items-center justify-between p-3.5 bg-white border border-[#D9E2DF] rounded-xl shadow-xs"
+                className="flex items-center justify-between p-3.5 bg-white border border-[#D9E2DF] rounded-2xl shadow-xs"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-[#DCEDEA] text-[#2F7D73] flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl bg-[#DCEDEA] text-[#2F7D73] flex items-center justify-center flex-shrink-0">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                     </svg>
@@ -161,8 +213,8 @@ export const DocumentsPage: React.FC = () => {
                     <p className="text-xs text-[#647471]">{doc.date} • {doc.size}</p>
                   </div>
                 </div>
-                <span className="text-xs font-semibold px-2 py-1 bg-[#EBF4EE] text-[#4F8A6D] rounded-md">
-                  ✓ Ready
+                <span className="text-xs font-semibold px-2.5 py-1 bg-[#EBF4EE] text-[#4F8A6D] rounded-lg">
+                  ✓ {t.common.ready}
                 </span>
               </div>
             ))}
@@ -175,12 +227,12 @@ export const DocumentsPage: React.FC = () => {
         <button
           type="button"
           onClick={goBack}
-          className="px-5 py-3 rounded-xl border border-[#D9E2DF] bg-white hover:bg-gray-50 text-base font-semibold text-[#243331] flex items-center gap-2 transition-colors cursor-pointer shadow-xs min-h-[48px]"
+          className="px-6 py-3.5 rounded-xl border border-[#D9E2DF] bg-white hover:bg-gray-50 text-base font-semibold text-[#243331] flex items-center gap-2 transition-colors cursor-pointer shadow-xs min-h-[48px]"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
           </svg>
-          <span>Back</span>
+          <span>{t.common.back}</span>
         </button>
 
         <HearAgainButton
@@ -194,9 +246,9 @@ export const DocumentsPage: React.FC = () => {
         <button
           type="button"
           onClick={() => goTo('review')}
-          className="px-7 py-3 bg-[#4F8A6D] hover:bg-[#3E6E56] active:bg-[#335B47] text-white font-bold text-base rounded-xl shadow-md flex items-center gap-2 transition-all cursor-pointer min-h-[48px]"
+          className="px-8 py-3.5 bg-[#4F8A6D] hover:bg-[#3E6E56] active:bg-[#335B47] text-white font-bold text-base rounded-xl shadow-md flex items-center gap-2 transition-all cursor-pointer min-h-[48px]"
         >
-          <span>Next</span>
+          <span>{t.common.next}</span>
           <svg className="w-5 h-5 stroke-current stroke-2" fill="none" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
           </svg>
@@ -205,3 +257,4 @@ export const DocumentsPage: React.FC = () => {
     </div>
   )
 }
+

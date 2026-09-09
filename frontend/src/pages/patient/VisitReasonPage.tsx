@@ -5,10 +5,7 @@ import { useInstructionPlayer } from '../../hooks/useInstructionPlayer'
 import { HearAgainButton } from '../../components/patient/HearAgainButton'
 
 export const VisitReasonPage: React.FC = () => {
-  const { setVisitType, goTo, goBack } = useKiosk()
-
-  const instruction =
-    "What brings you here today? Choose 'I have a health problem' to describe your symptoms, or choose 'Follow-up visit' if you are returning to add new reports or documents."
+  const { setVisitType, goTo, goBack, t, isMuted, selectedLanguage } = useKiosk()
 
   const {
     status,
@@ -17,9 +14,11 @@ export const VisitReasonPage: React.FC = () => {
     isPlaying,
     replay,
   } = useInstructionPlayer({
-    instruction,
+    instruction: t.page4_visitReason.instruction,
     repeatCount: 2,
     autoPlay: true,
+    langCode: selectedLanguage.code,
+    isMuted,
   })
 
   const handleSelectReason = (type: VisitType) => {
@@ -32,18 +31,18 @@ export const VisitReasonPage: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col items-center justify-between min-h-[calc(100vh-140px)] max-w-3xl mx-auto px-4 py-6">
-      {/* Heading */}
-      <div className="text-center my-4">
+    <div className="flex flex-col items-center justify-between min-h-[calc(100vh-140px)] max-w-4xl w-full mx-auto px-6 py-6 select-none">
+      {/* Heading - Desktop First */}
+      <div className="text-center my-4 max-w-2xl">
         <h2 className="text-3xl sm:text-4xl font-bold text-[#243331] mb-2 tracking-tight">
-          What brings you here today?
+          {t.page4_visitReason.title}
         </h2>
         <p className="text-base sm:text-lg text-[#647471] font-medium">
-          Choose the option that best applies
+          {t.page4_visitReason.subtitle}
         </p>
       </div>
 
-      {/* Two Major Choice Cards (Branching Page) */}
+      {/* Two Major Choice Cards (Desktop-First 2-Column Grid) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full my-6">
         {/* OPTION 1: New Health Problem (Branch A) */}
         <button
@@ -53,7 +52,7 @@ export const VisitReasonPage: React.FC = () => {
         >
           <div className="flex flex-col items-center">
             {/* Stethoscope Icon in soft teal container */}
-            <div className="w-18 h-18 rounded-2xl bg-[#DCEDEA] text-[#2F7D73] flex items-center justify-center mb-4 group-hover:scale-105 transition-transform shadow-xs">
+            <div className="w-20 h-20 rounded-2xl bg-[#DCEDEA] text-[#2F7D73] flex items-center justify-center mb-4 group-hover:scale-105 transition-transform shadow-xs">
               <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 8a4 4 0 01-8 0v4a4 4 0 004 4h0a4 4 0 004-4V8z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 16v3a2 2 0 01-2 2H8a2 2 0 01-2-2v-1" />
@@ -62,10 +61,10 @@ export const VisitReasonPage: React.FC = () => {
             </div>
 
             <h3 className="text-2xl font-bold text-[#243331] mb-2">
-              I have a health problem
+              {t.page4_visitReason.newProblemTitle}
             </h3>
             <p className="text-sm sm:text-base text-[#647471]">
-              Tell us about your symptoms or complaint
+              {t.page4_visitReason.newProblemDesc}
             </p>
           </div>
 
@@ -85,17 +84,17 @@ export const VisitReasonPage: React.FC = () => {
         >
           <div className="flex flex-col items-center">
             {/* Document / Reports Icon in soft blue container */}
-            <div className="w-18 h-18 rounded-2xl bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center mb-4 group-hover:scale-105 transition-transform shadow-xs">
+            <div className="w-20 h-20 rounded-2xl bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center mb-4 group-hover:scale-105 transition-transform shadow-xs">
               <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </div>
 
             <h3 className="text-2xl font-bold text-[#243331] mb-2">
-              Follow-up visit
+              {t.page4_visitReason.followUpTitle}
             </h3>
             <p className="text-sm sm:text-base text-[#647471]">
-              I have new reports or documents to add
+              {t.page4_visitReason.followUpDesc}
             </p>
           </div>
 
@@ -113,12 +112,12 @@ export const VisitReasonPage: React.FC = () => {
         <button
           type="button"
           onClick={goBack}
-          className="px-5 py-3 rounded-xl border border-[#D9E2DF] bg-white hover:bg-gray-50 text-base font-semibold text-[#243331] flex items-center gap-2 transition-colors cursor-pointer shadow-xs min-h-[48px]"
+          className="px-6 py-3.5 rounded-xl border border-[#D9E2DF] bg-white hover:bg-gray-50 text-base font-semibold text-[#243331] flex items-center gap-2 transition-colors cursor-pointer shadow-xs min-h-[48px]"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
           </svg>
-          <span>Back</span>
+          <span>{t.common.back}</span>
         </button>
 
         <HearAgainButton
@@ -129,8 +128,9 @@ export const VisitReasonPage: React.FC = () => {
           isPlaying={isPlaying}
         />
 
-        <div className="w-20" /> {/* Balance spacer */}
+        <div className="w-24 hidden sm:block" />
       </div>
     </div>
   )
 }
+

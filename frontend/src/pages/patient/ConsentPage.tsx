@@ -4,11 +4,8 @@ import { useInstructionPlayer } from '../../hooks/useInstructionPlayer'
 import { HearAgainButton } from '../../components/patient/HearAgainButton'
 
 export const ConsentPage: React.FC = () => {
-  const { setConsentGiven, goTo, goBack } = useKiosk()
+  const { setConsentGiven, goTo, goBack, t, isMuted, selectedLanguage } = useKiosk()
   const [showDeclineModal, setShowDeclineModal] = useState(false)
-
-  const instruction =
-    'Your privacy matters. Press the green button if you agree to share your answers, documents, and medical history with the doctor. Press the red button if you do not agree.'
 
   const {
     status,
@@ -17,9 +14,11 @@ export const ConsentPage: React.FC = () => {
     isPlaying,
     replay,
   } = useInstructionPlayer({
-    instruction,
+    instruction: t.page2_consent.instruction,
     repeatCount: 2,
     autoPlay: true,
+    langCode: selectedLanguage.code,
+    isMuted,
   })
 
   const handleAgree = () => {
@@ -33,9 +32,9 @@ export const ConsentPage: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col items-center justify-between min-h-[calc(100vh-140px)] max-w-2xl mx-auto px-4 py-6">
+    <div className="flex flex-col items-center justify-between min-h-[calc(100vh-140px)] max-w-4xl w-full mx-auto px-6 py-6 select-none">
       {/* Top Lock Icon Badge */}
-      <div className="w-16 h-16 rounded-full bg-[#DCEDEA] text-[#2F7D73] flex items-center justify-center mb-3 shadow-xs">
+      <div className="w-16 h-16 rounded-2xl bg-[#DCEDEA] text-[#2F7D73] flex items-center justify-center mb-3 shadow-xs">
         <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             strokeLinecap="round"
@@ -46,27 +45,27 @@ export const ConsentPage: React.FC = () => {
         </svg>
       </div>
 
-      {/* Heading */}
-      <div className="text-center mb-6">
+      {/* Heading - Desktop First */}
+      <div className="text-center mb-6 max-w-2xl">
         <h2 className="text-3xl sm:text-4xl font-bold text-[#243331] mb-2 tracking-tight">
-          Your Privacy Matters
+          {t.page2_consent.title}
         </h2>
         <p className="text-base sm:text-lg text-[#647471] font-medium">
-          We need your permission to continue. We may collect:
+          {t.page2_consent.subtitle}
         </p>
       </div>
 
-      {/* 3 Information Items (Card list matching storyboard) */}
-      <div className="w-full bg-[#FFFFFF] border border-[#D9E2DF] rounded-2xl p-5 sm:p-6 shadow-sm mb-6 space-y-4">
+      {/* 3 Information Items (Desktop-First Wide Card) */}
+      <div className="w-full bg-[#FFFFFF] border border-[#D9E2DF] rounded-3xl p-6 sm:p-8 shadow-sm mb-6 space-y-4">
         {/* Item 1: Mic */}
         <div className="flex items-center gap-4">
-          <div className="w-11 h-11 rounded-xl bg-[#F6F8F7] text-[#2F7D73] flex items-center justify-center flex-shrink-0">
+          <div className="w-12 h-12 rounded-2xl bg-[#F6F8F7] text-[#2F7D73] flex items-center justify-center flex-shrink-0">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
             </svg>
           </div>
           <span className="text-lg sm:text-xl font-semibold text-[#243331]">
-            Your answers (voice or text)
+            {t.page2_consent.itemAnswers}
           </span>
         </div>
 
@@ -74,13 +73,13 @@ export const ConsentPage: React.FC = () => {
 
         {/* Item 2: Document */}
         <div className="flex items-center gap-4">
-          <div className="w-11 h-11 rounded-xl bg-[#F6F8F7] text-[#2F7D73] flex items-center justify-center flex-shrink-0">
+          <div className="w-12 h-12 rounded-2xl bg-[#F6F8F7] text-[#2F7D73] flex items-center justify-center flex-shrink-0">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
           </div>
           <span className="text-lg sm:text-xl font-semibold text-[#243331]">
-            Your medical documents
+            {t.page2_consent.itemDocs}
           </span>
         </div>
 
@@ -88,19 +87,19 @@ export const ConsentPage: React.FC = () => {
 
         {/* Item 3: Clock */}
         <div className="flex items-center gap-4">
-          <div className="w-11 h-11 rounded-xl bg-[#F6F8F7] text-[#2F7D73] flex items-center justify-center flex-shrink-0">
+          <div className="w-12 h-12 rounded-2xl bg-[#F6F8F7] text-[#2F7D73] flex items-center justify-center flex-shrink-0">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
           <span className="text-lg sm:text-xl font-semibold text-[#243331]">
-            Your medical history
+            {t.page2_consent.itemHistory}
           </span>
         </div>
       </div>
 
       {/* Binary Decision Buttons (RED & GREEN as specified) */}
-      <div className="grid grid-cols-2 gap-4 w-full mb-6">
+      <div className="grid grid-cols-2 gap-5 w-full mb-6">
         {/* Red: I Don't Agree */}
         <button
           type="button"
@@ -110,7 +109,7 @@ export const ConsentPage: React.FC = () => {
           <svg className="w-6 h-6 stroke-current stroke-2" fill="none" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
-          <span>I Don't Agree</span>
+          <span>{t.page2_consent.btnDecline}</span>
         </button>
 
         {/* Green: I Agree */}
@@ -122,12 +121,23 @@ export const ConsentPage: React.FC = () => {
           <svg className="w-6 h-6 stroke-current stroke-2" fill="none" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
-          <span>I Agree</span>
+          <span>{t.page2_consent.btnAgree}</span>
         </button>
       </div>
 
-      {/* Bottom Area: Hear Again Button */}
-      <div className="w-full flex justify-center mt-auto">
+      {/* Bottom Bar: Back + Hear Again (Item 4: Consent Page Back Button) */}
+      <div className="w-full flex items-center justify-between mt-auto pt-4 border-t border-[#D9E2DF]">
+        <button
+          type="button"
+          onClick={goBack}
+          className="px-6 py-3.5 rounded-xl border border-[#D9E2DF] bg-white hover:bg-gray-50 text-base font-semibold text-[#243331] flex items-center gap-2 transition-colors cursor-pointer shadow-xs min-h-[48px]"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
+          </svg>
+          <span>{t.common.back}</span>
+        </button>
+
         <HearAgainButton
           onHearAgain={replay}
           status={status}
@@ -135,6 +145,8 @@ export const ConsentPage: React.FC = () => {
           totalRepetitions={totalRepetitions}
           isPlaying={isPlaying}
         />
+
+        <div className="w-24 hidden sm:block" />
       </div>
 
       {/* Gentle Decline Modal */}
@@ -146,9 +158,9 @@ export const ConsentPage: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </div>
-            <h3 className="text-xl font-bold text-[#243331] mb-2">Consent Required</h3>
+            <h3 className="text-xl font-bold text-[#243331] mb-2">{t.page2_consent.modalTitle}</h3>
             <p className="text-sm text-[#647471] mb-6">
-              To prepare your clinical history and documents for your doctor, MediKiosk requires your permission. Your data is stored securely and deleted after your OPD visit.
+              {t.page2_consent.modalDesc}
             </p>
             <div className="flex flex-col gap-3">
               <button
@@ -159,7 +171,7 @@ export const ConsentPage: React.FC = () => {
                 }}
                 className="w-full py-3.5 bg-[#4F8A6D] text-white font-bold rounded-xl text-base hover:bg-[#3E6E56] transition-colors"
               >
-                I Understand, I Agree
+                {t.page2_consent.modalBtnAgree}
               </button>
               <button
                 type="button"
@@ -167,9 +179,9 @@ export const ConsentPage: React.FC = () => {
                   setShowDeclineModal(false)
                   goBack()
                 }}
-                className="w-full py-3 text-[#647471] font-medium text-sm hover:underline"
+                className="w-full py-3 text-[#647471] font-medium text-sm hover:underline cursor-pointer"
               >
-                Return to Language Selection
+                {t.page2_consent.modalBtnReturn}
               </button>
             </div>
           </div>
@@ -178,3 +190,4 @@ export const ConsentPage: React.FC = () => {
     </div>
   )
 }
+

@@ -22,7 +22,7 @@ const ROUTE_STEP_MAP: Record<PageRoute, number> = {
 }
 
 export const KioskHeader: React.FC<KioskHeaderProps> = () => {
-  const { currentRoute, appMode, setAppMode, resetKiosk } = useKiosk()
+  const { currentRoute, resetKiosk, t } = useKiosk()
   const [currentTime, setCurrentTime] = useState<string>('')
   const [currentDate, setCurrentDate] = useState<string>('')
 
@@ -52,7 +52,7 @@ export const KioskHeader: React.FC<KioskHeaderProps> = () => {
 
   return (
     <header className="w-full bg-[#FFFFFF] border-b border-[#D9E2DF] px-6 py-4 select-none">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-5xl mx-auto">
         {/* Top Branding & Meta Bar */}
         <div className="flex items-center justify-between">
           {/* Logo & Slogan */}
@@ -64,42 +64,30 @@ export const KioskHeader: React.FC<KioskHeaderProps> = () => {
             <div className="w-10 h-10 rounded-xl bg-[#2F7D73] text-white flex items-center justify-center shadow-sm">
               {/* Medical Heart / Cross Icon */}
               <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
-                <path d="M19 10.5h-4.5V6a1.5 1.5 0 00-3 0v4.5H7a1.5 1.5 0 000 3h4.5V18a1.5 1.5 0 003 0v-4.5H19a1.5 1.5 0 000-3z" />
+                <path d="M19 10.5h-4.5V6a1.5 1.5 0 00-3 0v4.5H7a1.5 1.5 0 000 3h4.5V18a1.5 1.5 0 003 0v-4.5H19a1.5 1.5 0 00-3z" />
               </svg>
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-xl font-bold tracking-tight text-[#243331]">
-                  MediKiosk
+                  {t.header.brandName}
                 </h1>
                 <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded bg-[#DCEDEA] text-[#2F7D73]">
-                  Kiosk Mode
+                  Kiosk
                 </span>
               </div>
               <p className="text-xs text-[#647471] font-medium">
-                Your Health, Our Priority.
+                {t.header.tagline}
               </p>
             </div>
           </div>
 
-          {/* Time, Date & Demo View Switcher */}
+          {/* Time & Date */}
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
               <div className="text-sm font-semibold text-[#243331]">{currentTime || '10:24 AM'}</div>
               <div className="text-xs text-[#647471]">{currentDate || 'Tue, 9 Sep 2026'}</div>
             </div>
-
-            {/* Doctor View Switcher (for prototype evaluation) */}
-            <button
-              onClick={() => setAppMode(appMode === 'kiosk' ? 'doctor' : 'kiosk')}
-              className="px-3 py-1.5 rounded-lg border border-[#D9E2DF] bg-[#F6F8F7] hover:bg-[#DCEDEA] text-xs font-semibold text-[#2F7D73] transition-colors flex items-center gap-1.5"
-              title="Toggle Doctor Review Dashboard"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-              <span>{appMode === 'kiosk' ? 'Doctor View' : 'Kiosk View'}</span>
-            </button>
           </div>
         </div>
 

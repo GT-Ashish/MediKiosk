@@ -25,9 +25,6 @@ export const ComplaintPage: React.FC = () => {
 
   const [state, setState] = useState<Page5State>('INSTRUCTION_PLAYING')
   const [typedText, setTypedText] = useState<string>(chiefComplaint || '')
-  const [responseSource, setResponseSource] = useState<'voice' | 'typing'>(
-    chiefComplaint ? 'voice' : 'voice'
-  )
   const voiceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const clearVoiceTimers = () => {
@@ -78,7 +75,6 @@ export const ComplaintPage: React.FC = () => {
       voiceTimerRef.current = setTimeout(() => {
         const transcript = t.page5_complaint.mockTranscript
         setChiefComplaint(transcript)
-        setResponseSource('voice')
         setState('SHOWING_TRANSCRIPT')
       }, 1200)
     }, 2800)
@@ -96,7 +92,6 @@ export const ComplaintPage: React.FC = () => {
     if (e) e.preventDefault()
     if (typedText.trim()) {
       setChiefComplaint(typedText.trim())
-      setResponseSource('typing')
       setState('SUBMITTED')
     }
   }
