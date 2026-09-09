@@ -99,7 +99,7 @@ export const DocumentsPage: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col items-center justify-between min-h-[calc(100vh-140px)] max-w-4xl w-full mx-auto px-6 py-6 select-none">
+    <div className="flex flex-col items-center justify-between h-full max-w-4xl w-full mx-auto px-6 py-1 select-none">
       {/* Hidden browser file input for Upload from PC */}
       <input
         type="file"
@@ -120,7 +120,7 @@ export const DocumentsPage: React.FC = () => {
       </div>
 
       {/* Main Scanner & Upload Card (Desktop-First Wide Card) */}
-      <div className="w-full my-4">
+      <div className="w-full flex-1 min-h-0 overflow-y-auto my-1 pr-1">
         <div className="w-full bg-[#FFFFFF] border-2 border-dashed border-[#D9E2DF] hover:border-[#2F7D73] rounded-3xl p-6 sm:p-8 text-center transition-all">
           {/* Document Icon in soft blue */}
           <div className="w-16 h-16 rounded-2xl bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center mx-auto mb-3 shadow-xs">
@@ -223,7 +223,7 @@ export const DocumentsPage: React.FC = () => {
       </div>
 
       {/* Bottom Bar: Back + Hear Again + Next */}
-      <div className="w-full flex items-center justify-between mt-auto pt-4 border-t border-[#D9E2DF]">
+      <div className="w-full flex items-center justify-between mt-auto pt-3 border-t border-[#D9E2DF]">
         <button
           type="button"
           onClick={goBack}

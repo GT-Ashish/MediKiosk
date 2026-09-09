@@ -31,9 +31,9 @@ export const VisitReasonPage: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col items-center justify-between min-h-[calc(100vh-140px)] max-w-4xl w-full mx-auto px-6 py-6 select-none">
+    <div className="flex flex-col items-center justify-between h-full max-w-4xl w-full mx-auto px-6 py-1 select-none">
       {/* Heading - Desktop First */}
-      <div className="text-center my-4 max-w-2xl">
+      <div className="text-center my-2 max-w-2xl">
         <h2 className="text-3xl sm:text-4xl font-bold text-[#243331] mb-2 tracking-tight">
           {t.page4_visitReason.title}
         </h2>
@@ -43,12 +43,12 @@ export const VisitReasonPage: React.FC = () => {
       </div>
 
       {/* Two Major Choice Cards (Desktop-First 2-Column Grid) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full my-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 w-full my-3">
         {/* OPTION 1: New Health Problem (Branch A) */}
         <button
           type="button"
           onClick={() => handleSelectReason('new_problem')}
-          className="flex flex-col items-center text-center p-8 bg-[#FFFFFF] border-2 border-[#D9E2DF] hover:border-[#2F7D73] hover:bg-[#F9FBFA] active:bg-[#DCEDEA] rounded-3xl shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer group justify-between min-h-[280px]"
+          className="flex flex-col items-center text-center p-6 bg-[#FFFFFF] border-2 border-[#D9E2DF] hover:border-[#2F7D73] hover:bg-[#F9FBFA] active:bg-[#DCEDEA] rounded-3xl shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer group justify-between min-h-[230px]"
         >
           <div className="flex flex-col items-center">
             {/* Stethoscope Icon in soft teal container */}
@@ -80,7 +80,7 @@ export const VisitReasonPage: React.FC = () => {
         <button
           type="button"
           onClick={() => handleSelectReason('follow_up')}
-          className="flex flex-col items-center text-center p-8 bg-[#FFFFFF] border-2 border-[#D9E2DF] hover:border-[#2563EB] hover:bg-[#F9FBFA] active:bg-[#EFF6FF] rounded-3xl shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer group justify-between min-h-[280px]"
+          className="flex flex-col items-center text-center p-6 bg-[#FFFFFF] border-2 border-[#D9E2DF] hover:border-[#2563EB] hover:bg-[#F9FBFA] active:bg-[#EFF6FF] rounded-3xl shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer group justify-between min-h-[230px]"
         >
           <div className="flex flex-col items-center">
             {/* Document / Reports Icon in soft blue container */}
@@ -108,7 +108,7 @@ export const VisitReasonPage: React.FC = () => {
       </div>
 
       {/* Bottom Bar: Back + Hear Again */}
-      <div className="w-full flex items-center justify-between mt-auto pt-4 border-t border-[#D9E2DF]">
+      <div className="w-full flex items-center justify-between mt-auto pt-3 border-t border-[#D9E2DF]">
         <button
           type="button"
           onClick={goBack}

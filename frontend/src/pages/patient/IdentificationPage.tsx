@@ -38,9 +38,9 @@ export const IdentificationPage: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col items-center justify-between min-h-[calc(100vh-140px)] max-w-4xl w-full mx-auto px-6 py-6 select-none">
+    <div className="flex flex-col items-center justify-between h-full max-w-4xl w-full mx-auto px-6 py-1 select-none">
       {/* Heading - Desktop First */}
-      <div className="text-center my-4 max-w-2xl">
+      <div className="text-center my-2 max-w-2xl">
         <h2 className="text-3xl sm:text-4xl font-bold text-[#243331] mb-2 tracking-tight">
           {t.page3_identification.title}
         </h2>
@@ -50,12 +50,12 @@ export const IdentificationPage: React.FC = () => {
       </div>
 
       {/* 3 Large Option Cards */}
-      <div className="w-full space-y-4 my-6">
+      <div className="w-full space-y-3 my-3">
         {/* Option 1: Aadhaar */}
         <button
           type="button"
           onClick={() => handleSelectMethod('aadhaar')}
-          className="w-full flex items-center justify-between p-6 bg-[#FFFFFF] border-2 border-[#D9E2DF] hover:border-[#2F7D73] hover:bg-[#F9FBFA] active:bg-[#DCEDEA] rounded-3xl shadow-sm hover:shadow-md transition-all cursor-pointer group text-left"
+          className="w-full flex items-center justify-between p-5 bg-[#FFFFFF] border-2 border-[#D9E2DF] hover:border-[#2F7D73] hover:bg-[#F9FBFA] active:bg-[#DCEDEA] rounded-3xl shadow-sm hover:shadow-md transition-all cursor-pointer group text-left"
         >
           <div className="flex items-center gap-5">
             <div className="w-16 h-16 rounded-2xl bg-[#E8F4F1] text-[#2F7D73] flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform shadow-xs">
@@ -82,7 +82,7 @@ export const IdentificationPage: React.FC = () => {
         <button
           type="button"
           onClick={() => handleSelectMethod('abha')}
-          className="w-full flex items-center justify-between p-6 bg-[#FFFFFF] border-2 border-[#D9E2DF] hover:border-[#2F7D73] hover:bg-[#F9FBFA] active:bg-[#DCEDEA] rounded-3xl shadow-sm hover:shadow-md transition-all cursor-pointer group text-left"
+          className="w-full flex items-center justify-between p-5 bg-[#FFFFFF] border-2 border-[#D9E2DF] hover:border-[#2F7D73] hover:bg-[#F9FBFA] active:bg-[#DCEDEA] rounded-3xl shadow-sm hover:shadow-md transition-all cursor-pointer group text-left"
         >
           <div className="flex items-center gap-5">
             <div className="w-16 h-16 rounded-2xl bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform shadow-xs">
@@ -109,7 +109,7 @@ export const IdentificationPage: React.FC = () => {
         <button
           type="button"
           onClick={() => handleSelectMethod('manual')}
-          className="w-full flex items-center justify-between p-6 bg-[#FFFFFF] border-2 border-[#D9E2DF] hover:border-[#2F7D73] hover:bg-[#F9FBFA] active:bg-[#DCEDEA] rounded-3xl shadow-sm hover:shadow-md transition-all cursor-pointer group text-left"
+          className="w-full flex items-center justify-between p-5 bg-[#FFFFFF] border-2 border-[#D9E2DF] hover:border-[#2F7D73] hover:bg-[#F9FBFA] active:bg-[#DCEDEA] rounded-3xl shadow-sm hover:shadow-md transition-all cursor-pointer group text-left"
         >
           <div className="flex items-center gap-5">
             <div className="w-16 h-16 rounded-2xl bg-[#F6F8F7] text-[#647471] flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform shadow-xs">
@@ -134,7 +134,7 @@ export const IdentificationPage: React.FC = () => {
       </div>
 
       {/* Bottom Bar: Back button + Blue Hear Again button */}
-      <div className="w-full flex items-center justify-between mt-auto pt-4 border-t border-[#D9E2DF]">
+      <div className="w-full flex items-center justify-between mt-auto pt-3 border-t border-[#D9E2DF]">
         <button
           type="button"
           onClick={goBack}

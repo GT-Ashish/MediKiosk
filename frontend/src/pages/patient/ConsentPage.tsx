@@ -32,9 +32,9 @@ export const ConsentPage: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col items-center justify-between min-h-[calc(100vh-140px)] max-w-4xl w-full mx-auto px-6 py-6 select-none">
+    <div className="flex flex-col items-center justify-between h-full max-w-4xl w-full mx-auto px-6 py-1 select-none">
       {/* Top Lock Icon Badge */}
-      <div className="w-16 h-16 rounded-2xl bg-[#DCEDEA] text-[#2F7D73] flex items-center justify-center mb-3 shadow-xs">
+      <div className="w-14 h-14 rounded-2xl bg-[#DCEDEA] text-[#2F7D73] flex items-center justify-center mb-2 shadow-xs">
         <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             strokeLinecap="round"
@@ -46,7 +46,7 @@ export const ConsentPage: React.FC = () => {
       </div>
 
       {/* Heading - Desktop First */}
-      <div className="text-center mb-6 max-w-2xl">
+      <div className="text-center mb-4 max-w-2xl">
         <h2 className="text-3xl sm:text-4xl font-bold text-[#243331] mb-2 tracking-tight">
           {t.page2_consent.title}
         </h2>
@@ -56,7 +56,7 @@ export const ConsentPage: React.FC = () => {
       </div>
 
       {/* 3 Information Items (Desktop-First Wide Card) */}
-      <div className="w-full bg-[#FFFFFF] border border-[#D9E2DF] rounded-3xl p-6 sm:p-8 shadow-sm mb-6 space-y-4">
+      <div className="w-full bg-[#FFFFFF] border border-[#D9E2DF] rounded-3xl p-5 sm:p-6 shadow-sm mb-4 space-y-3">
         {/* Item 1: Mic */}
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-[#F6F8F7] text-[#2F7D73] flex items-center justify-center flex-shrink-0">
@@ -64,7 +64,7 @@ export const ConsentPage: React.FC = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
             </svg>
           </div>
-          <span className="text-lg sm:text-xl font-semibold text-[#243331]">
+          <span className="text-base sm:text-lg font-semibold text-[#243331]">
             {t.page2_consent.itemAnswers}
           </span>
         </div>
@@ -78,7 +78,7 @@ export const ConsentPage: React.FC = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
           </div>
-          <span className="text-lg sm:text-xl font-semibold text-[#243331]">
+          <span className="text-base sm:text-lg font-semibold text-[#243331]">
             {t.page2_consent.itemDocs}
           </span>
         </div>
@@ -92,14 +92,14 @@ export const ConsentPage: React.FC = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <span className="text-lg sm:text-xl font-semibold text-[#243331]">
+          <span className="text-base sm:text-lg font-semibold text-[#243331]">
             {t.page2_consent.itemHistory}
           </span>
         </div>
       </div>
 
       {/* Binary Decision Buttons (RED & GREEN as specified) */}
-      <div className="grid grid-cols-2 gap-5 w-full mb-6">
+      <div className="grid grid-cols-2 gap-5 w-full mb-4">
         {/* Red: I Don't Agree */}
         <button
           type="button"
@@ -126,7 +126,7 @@ export const ConsentPage: React.FC = () => {
       </div>
 
       {/* Bottom Bar: Back + Hear Again (Item 4: Consent Page Back Button) */}
-      <div className="w-full flex items-center justify-between mt-auto pt-4 border-t border-[#D9E2DF]">
+      <div className="w-full flex items-center justify-between mt-auto pt-3 border-t border-[#D9E2DF]">
         <button
           type="button"
           onClick={goBack}

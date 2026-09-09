@@ -220,7 +220,7 @@ export const ReviewSummaryPage: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col items-center justify-between min-h-[calc(100vh-140px)] max-w-4xl w-full mx-auto px-6 py-6 select-none">
+    <div className="flex flex-col items-center justify-between h-full max-w-4xl w-full mx-auto px-6 py-1 select-none">
       {/* Heading - Desktop First */}
       <div className="text-center my-2 max-w-2xl">
         <h2 className="text-3xl sm:text-4xl font-bold text-[#243331] mb-2 tracking-tight">
@@ -231,145 +231,147 @@ export const ReviewSummaryPage: React.FC = () => {
         </p>
       </div>
 
-      {/* Main Review Summary Card (Desktop-First Wide Card) */}
-      <div className="w-full bg-[#FFFFFF] border border-[#D9E2DF] rounded-3xl p-6 sm:p-8 shadow-sm my-4 space-y-6">
-        {/* Section 1: Your Information */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-bold text-[#243331] flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#2F7D73]" />
-              {t.page8_review.sectionPatientInfo}
-            </h3>
-            {/* Item 10 & 11: Only show Edit if New Problem */}
-            {isNewProblem && (
-              <button
-                type="button"
-                onClick={handleStartChiefComplaintEdit}
-                className="text-xs font-semibold text-[#2F7D73] hover:text-[#276B63] bg-[#DCEDEA] hover:bg-[#CFE5E1] px-3 py-1.5 rounded-lg flex items-center gap-1.5 cursor-pointer transition-colors"
-                title="Edit chief complaint"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                </svg>
-                <span>{t.common.edit}</span>
-              </button>
-            )}
-          </div>
-
-          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-6 text-sm sm:text-base bg-[#F6F8F7] p-4 sm:p-5 rounded-2xl border border-[#EBF0EE]">
-            <div>
-              <dt className="text-xs uppercase font-bold text-[#647471] tracking-wider mb-0.5">{t.page8_review.fieldName}</dt>
-              <dd className="font-bold text-[#243331] text-lg">{patient.name}</dd>
-            </div>
-
-            <div>
-              <dt className="text-xs uppercase font-bold text-[#647471] tracking-wider mb-0.5">{t.page8_review.fieldAgeGender}</dt>
-              <dd className="font-semibold text-[#243331] text-lg">{patient.age} years / {patient.gender}</dd>
-            </div>
-
-            <div>
-              <dt className="text-xs uppercase font-bold text-[#647471] tracking-wider mb-0.5">{t.page8_review.fieldVisitType}</dt>
-              <dd className="font-semibold text-[#2F7D73] text-lg">
-                {visitType === 'new_problem' ? t.page8_review.visitTypeNew : t.page8_review.visitTypeFollowUp}
-              </dd>
-            </div>
-
-            <div>
-              <dt className="text-xs uppercase font-bold text-[#647471] tracking-wider mb-0.5">{t.page8_review.fieldComplaint}</dt>
-              <dd className="font-bold text-[#243331] text-lg">{chiefComplaint}</dd>
-            </div>
-          </dl>
-        </div>
-
-        {/* Section 2: Key Points from Conversation */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-bold text-[#243331] flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#2F7D73]" />
-              {t.page8_review.sectionKeyPoints}
-            </h3>
-          </div>
-
-          <div className="space-y-2.5 bg-[#F6F8F7] p-4 sm:p-5 rounded-2xl border border-[#EBF0EE]">
-            {keyPointsList.map((pt) => (
-              <div
-                key={pt.key}
-                className="flex items-center justify-between p-3.5 bg-white rounded-2xl border border-[#EBF0EE] shadow-2xs gap-3"
-              >
-                <div className="flex items-start gap-2.5 flex-1">
-                  <span className="text-[#2F7D73] font-bold text-lg leading-none mt-0.5">•</span>
-                  <div>
-                    <span className="text-xs font-bold uppercase tracking-wider text-[#647471] block">
-                      {pt.label}
-                    </span>
-                    <span className="text-base font-semibold text-[#243331]">
-                      {pt.value}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Item 10 & 13: Only show Edit if New Problem */}
-                {isNewProblem && (
-                  <button
-                    type="button"
-                    onClick={() => handleOpenEditKeyPoint(pt.key, pt.value)}
-                    className="text-xs font-semibold text-[#2F7D73] hover:text-[#276B63] bg-[#DCEDEA] hover:bg-[#CFE5E1] px-3 py-1.5 rounded-lg flex items-center gap-1.5 cursor-pointer transition-colors flex-shrink-0"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                    </svg>
-                    <span>{t.common.edit}</span>
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Section 3: Uploaded Documents */}
-        <div>
-          <h3 className="text-lg font-bold text-[#243331] mb-3 flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#2F7D73]" />
-            {t.page8_review.sectionDocs} ({documents.length})
-          </h3>
-          {documents.length > 0 ? (
-            <div className="space-y-2">
-              {documents.map((doc) => (
-                <div
-                  key={doc.id}
-                  className="flex items-center justify-between p-3.5 bg-[#F6F8F7] rounded-xl border border-[#EBF0EE]"
+      {/* Main Review Summary Card (Desktop-First Wide Card) — scrolls internally so bottom bar stays visible */}
+      <div className="flex-1 min-h-0 w-full overflow-y-auto my-1 pr-1">
+        <div className="w-full bg-[#FFFFFF] border border-[#D9E2DF] rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
+          {/* Section 1: Your Information */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-bold text-[#243331] flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#2F7D73]" />
+                {t.page8_review.sectionPatientInfo}
+              </h3>
+              {/* Item 10 & 11: Only show Edit if New Problem */}
+              {isNewProblem && (
+                <button
+                  type="button"
+                  onClick={handleStartChiefComplaintEdit}
+                  className="text-xs font-semibold text-[#2F7D73] hover:text-[#276B63] bg-[#DCEDEA] hover:bg-[#CFE5E1] px-3 py-1.5 rounded-lg flex items-center gap-1.5 cursor-pointer transition-colors"
+                  title="Edit chief complaint"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-[#DCEDEA] text-[#2F7D73] flex items-center justify-center">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                      </svg>
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                  <span>{t.common.edit}</span>
+                </button>
+              )}
+            </div>
+
+            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-6 text-sm sm:text-base bg-[#F6F8F7] p-4 sm:p-5 rounded-2xl border border-[#EBF0EE]">
+              <div>
+                <dt className="text-xs uppercase font-bold text-[#647471] tracking-wider mb-0.5">{t.page8_review.fieldName}</dt>
+                <dd className="font-bold text-[#243331] text-lg">{patient.name}</dd>
+              </div>
+
+              <div>
+                <dt className="text-xs uppercase font-bold text-[#647471] tracking-wider mb-0.5">{t.page8_review.fieldAgeGender}</dt>
+                <dd className="font-semibold text-[#243331] text-lg">{patient.age} years / {patient.gender}</dd>
+              </div>
+
+              <div>
+                <dt className="text-xs uppercase font-bold text-[#647471] tracking-wider mb-0.5">{t.page8_review.fieldVisitType}</dt>
+                <dd className="font-semibold text-[#2F7D73] text-lg">
+                  {visitType === 'new_problem' ? t.page8_review.visitTypeNew : t.page8_review.visitTypeFollowUp}
+                </dd>
+              </div>
+
+              <div>
+                <dt className="text-xs uppercase font-bold text-[#647471] tracking-wider mb-0.5">{t.page8_review.fieldComplaint}</dt>
+                <dd className="font-bold text-[#243331] text-lg">{chiefComplaint}</dd>
+              </div>
+            </dl>
+          </div>
+
+          {/* Section 2: Key Points from Conversation */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-bold text-[#243331] flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#2F7D73]" />
+                {t.page8_review.sectionKeyPoints}
+              </h3>
+            </div>
+
+            <div className="space-y-2.5 bg-[#F6F8F7] p-4 sm:p-5 rounded-2xl border border-[#EBF0EE]">
+              {keyPointsList.map((pt) => (
+                <div
+                  key={pt.key}
+                  className="flex items-center justify-between p-3.5 bg-white rounded-2xl border border-[#EBF0EE] shadow-2xs gap-3"
+                >
+                  <div className="flex items-start gap-2.5 flex-1">
+                    <span className="text-[#2F7D73] font-bold text-lg leading-none mt-0.5">•</span>
+                    <div>
+                      <span className="text-xs font-bold uppercase tracking-wider text-[#647471] block">
+                        {pt.label}
+                      </span>
+                      <span className="text-base font-semibold text-[#243331]">
+                        {pt.value}
+                      </span>
                     </div>
-                    <span className="text-sm font-semibold text-[#243331]">{doc.title}</span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setViewingDoc(doc.title)}
-                    className="text-xs font-semibold text-[#2563EB] hover:underline cursor-pointer"
-                  >
-                    👁 View
-                  </button>
+
+                  {/* Item 10 & 13: Only show Edit if New Problem */}
+                  {isNewProblem && (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditKeyPoint(pt.key, pt.value)}
+                      className="text-xs font-semibold text-[#2F7D73] hover:text-[#276B63] bg-[#DCEDEA] hover:bg-[#CFE5E1] px-3 py-1.5 rounded-lg flex items-center gap-1.5 cursor-pointer transition-colors flex-shrink-0"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      </svg>
+                      <span>{t.common.edit}</span>
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
-          ) : (
-            <p className="text-sm text-[#647471] italic">No prior documents attached for this visit.</p>
-          )}
-        </div>
+          </div>
 
-        {/* Clinical Safety Draft Disclaimer */}
-        <div className="p-4 bg-[#EFF6FF] border border-[#BFDBFE] rounded-2xl text-xs text-[#1D4ED8]">
-          <span className="font-bold">Notice:</span> {t.page8_review.disclaimer}
+          {/* Section 3: Uploaded Documents */}
+          <div>
+            <h3 className="text-lg font-bold text-[#243331] mb-3 flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#2F7D73]" />
+              {t.page8_review.sectionDocs} ({documents.length})
+            </h3>
+            {documents.length > 0 ? (
+              <div className="space-y-2">
+                {documents.map((doc) => (
+                  <div
+                    key={doc.id}
+                    className="flex items-center justify-between p-3.5 bg-[#F6F8F7] rounded-xl border border-[#EBF0EE]"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-[#DCEDEA] text-[#2F7D73] flex items-center justify-center">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                      <span className="text-sm font-semibold text-[#243331]">{doc.title}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setViewingDoc(doc.title)}
+                      className="text-xs font-semibold text-[#2563EB] hover:underline cursor-pointer"
+                    >
+                      👁 View
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-[#647471] italic">No prior documents attached for this visit.</p>
+            )}
+          </div>
+
+          {/* Clinical Safety Draft Disclaimer */}
+          <div className="p-4 bg-[#EFF6FF] border border-[#BFDBFE] rounded-2xl text-xs text-[#1D4ED8]">
+            <span className="font-bold">Notice:</span> {t.page8_review.disclaimer}
+          </div>
         </div>
       </div>
 
       {/* Bottom Bar: Back + Hear Again + Next (Item 14: Next, not Looks Correct) */}
-      <div className="w-full flex items-center justify-between mt-auto pt-4 border-t border-[#D9E2DF]">
+      <div className="w-full flex items-center justify-between mt-auto pt-3 pb-0.5 border-t border-[#D9E2DF]">
         <button
           type="button"
           onClick={goBack}

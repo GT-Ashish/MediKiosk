@@ -20,7 +20,7 @@ export const HearAgainButton: React.FC<HearAgainButtonProps> = ({
   const { t, isMuted, toggleMute } = useKiosk()
 
   return (
-    <div className="flex flex-col items-center justify-center my-3 select-none">
+    <div className="flex flex-col items-center justify-center my-0 select-none">
       {/* Audio Playback Status Badge (Non-intrusive indicator) */}
       <div className="mb-2 h-6 flex items-center justify-center text-xs text-[#647471]">
         {isMuted ? (
@@ -50,9 +50,8 @@ export const HearAgainButton: React.FC<HearAgainButtonProps> = ({
           onClick={onHearAgain}
           aria-label="Hear instructions again"
           title="Hear instructions again"
-          className={`px-5 py-3 rounded-2xl bg-[#2563EB] hover:bg-[#1D4ED8] active:bg-[#1E40AF] text-white font-bold text-sm sm:text-base flex items-center gap-2.5 shadow-md hover:shadow-lg transition-all transform active:scale-95 cursor-pointer focus:ring-4 focus:ring-[#BFDBFE] ${
-            isPlaying ? 'ring-4 ring-[#BFDBFE] scale-102' : ''
-          }`}
+          className={`px-5 py-3 rounded-2xl bg-[#2563EB] hover:bg-[#1D4ED8] active:bg-[#1E40AF] text-white font-bold text-sm sm:text-base flex items-center gap-2.5 shadow-md hover:shadow-lg transition-all transform active:scale-95 cursor-pointer focus:ring-4 focus:ring-[#BFDBFE] ${isPlaying ? 'ring-4 ring-[#BFDBFE] scale-102' : ''
+            }`}
         >
           {/* Speaker Volume High Icon */}
           <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -72,11 +71,10 @@ export const HearAgainButton: React.FC<HearAgainButtonProps> = ({
           onClick={toggleMute}
           aria-label={isMuted ? 'Unmute instructions' : 'Mute instructions'}
           title={isMuted ? 'Unmute instructions' : 'Mute instructions'}
-          className={`px-4 py-3 rounded-2xl border font-semibold text-sm flex items-center gap-2 shadow-xs transition-all cursor-pointer ${
-            isMuted
+          className={`px-4 py-3 rounded-2xl border font-semibold text-sm flex items-center gap-2 shadow-xs transition-all cursor-pointer ${isMuted
               ? 'bg-[#F9EBEB] border-[#B85C5C] text-[#B85C5C] hover:bg-[#F3DCDC]'
               : 'bg-white border-[#D9E2DF] text-[#647471] hover:bg-gray-50 hover:text-[#243331]'
-          }`}
+            }`}
         >
           {isMuted ? (
             <>

@@ -5,7 +5,7 @@ import { HearAgainButton } from '../../components/patient/HearAgainButton'
 
 export const ConfirmationPage: React.FC = () => {
   const { tokenNumber, resetKiosk, t, isMuted, selectedLanguage } = useKiosk()
-  const [secondsLeft, setSecondsLeft] = useState(15)
+  const [secondsLeft, setSecondsLeft] = useState(120)
 
   const {
     status,
@@ -21,7 +21,7 @@ export const ConfirmationPage: React.FC = () => {
     isMuted,
   })
 
-  // 15-second automatic redirect to Home/Language page (Item 15)
+  // 120-second automatic redirect to Home/Language page (Item 15)
   useEffect(() => {
     const timer = setInterval(() => {
       setSecondsLeft((prev) => {
@@ -38,16 +38,16 @@ export const ConfirmationPage: React.FC = () => {
   }, [resetKiosk])
 
   return (
-    <div className="flex flex-col items-center justify-between min-h-[calc(100vh-140px)] max-w-4xl w-full mx-auto px-6 py-6 text-center select-none">
+    <div className="flex flex-col items-center justify-between h-full max-w-4xl w-full mx-auto px-6 py-1 text-center select-none">
       {/* Top Green Checkmark Circle Badge */}
-      <div className="w-20 h-20 rounded-full bg-[#EBF4EE] text-[#4F8A6D] flex items-center justify-center my-2 shadow-xs">
-        <svg className="w-12 h-12 stroke-current stroke-2" fill="none" viewBox="0 0 24 24">
+      <div className="w-16 h-16 rounded-full bg-[#EBF4EE] text-[#4F8A6D] flex items-center justify-center my-1 shadow-xs">
+        <svg className="w-10 h-10 stroke-current stroke-2" fill="none" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
         </svg>
       </div>
 
       {/* Heading - Desktop First */}
-      <div className="my-2 max-w-2xl">
+      <div className="my-1 max-w-2xl">
         <h2 className="text-3xl sm:text-4xl font-bold text-[#243331] mb-1 tracking-tight">
           {t.page9_confirmation.title}
         </h2>
@@ -57,7 +57,7 @@ export const ConfirmationPage: React.FC = () => {
       </div>
 
       {/* Large Token Number Card (matching storyboard) */}
-      <div className="w-full max-w-lg bg-[#FFFFFF] border-2 border-[#2F7D73] rounded-3xl p-6 shadow-md my-3 flex flex-col items-center">
+      <div className="w-full max-w-lg bg-[#FFFFFF] border-2 border-[#2F7D73] rounded-3xl p-4 shadow-md my-2 flex flex-col items-center">
         <div className="flex items-center gap-2 text-[#647471] text-xs uppercase font-bold tracking-widest mb-1">
           <svg className="w-4 h-4 text-[#2F7D73]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
@@ -70,11 +70,11 @@ export const ConfirmationPage: React.FC = () => {
       </div>
 
       {/* What Happens Next Card */}
-      <div className="w-full max-w-2xl bg-[#FFFFFF] border border-[#D9E2DF] rounded-3xl p-6 sm:p-7 shadow-sm my-3 text-left">
+      <div className="w-full max-w-2xl bg-[#FFFFFF] border border-[#D9E2DF] rounded-3xl p-5 sm:p-6 shadow-sm my-2 text-left">
         <h3 className="text-base font-bold text-[#243331] mb-4 uppercase tracking-wide">
           {t.page9_confirmation.nextStepsTitle}
         </h3>
-        <ol className="space-y-3.5 text-sm sm:text-base text-[#243331]">
+        <ol className="space-y-2.5 text-sm sm:text-base text-[#243331]">
           <li className="flex items-start gap-3">
             <span className="w-7 h-7 rounded-full bg-[#DCEDEA] text-[#2F7D73] font-bold text-xs flex items-center justify-center flex-shrink-0 mt-0.5">
               1
@@ -97,8 +97,8 @@ export const ConfirmationPage: React.FC = () => {
       </div>
 
       {/* Countdown Indicator & Action Buttons */}
-      <div className="w-full max-w-md space-y-3 mt-2">
-        {/* Visible 15s Countdown */}
+      <div className="w-full max-w-md space-y-2.5 mt-1">
+        {/* Visible 120s Countdown */}
         <div className="flex items-center justify-center gap-2 px-4 py-2 bg-[#F6F8F7] border border-[#D9E2DF] rounded-full text-xs font-semibold text-[#647471]">
           <span className="w-2 h-2 rounded-full bg-[#2F7D73] animate-pulse" />
           <span>
@@ -120,7 +120,7 @@ export const ConfirmationPage: React.FC = () => {
       </div>
 
       {/* Bottom: Hear Again Button */}
-      <div className="w-full flex justify-center mt-4 border-t border-[#D9E2DF] pt-3">
+      <div className="w-full flex justify-center mt-2 border-t border-[#D9E2DF] pt-2">
         <HearAgainButton
           onHearAgain={replay}
           status={status}

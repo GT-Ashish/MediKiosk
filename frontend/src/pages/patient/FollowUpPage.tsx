@@ -39,9 +39,9 @@ export const FollowUpPage: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col items-center justify-between min-h-[calc(100vh-140px)] max-w-4xl w-full mx-auto px-6 py-6 select-none">
+    <div className="flex flex-col items-center justify-between h-full max-w-4xl w-full mx-auto px-6 py-1 select-none">
       {/* Heading - Desktop First */}
-      <div className="text-center my-3 max-w-2xl">
+      <div className="text-center my-2 max-w-2xl">
         <h2 className="text-3xl sm:text-4xl font-bold text-[#243331] mb-2 tracking-tight">
           {t.page10_followUp.title}
         </h2>
@@ -51,7 +51,7 @@ export const FollowUpPage: React.FC = () => {
       </div>
 
       {/* List of Previous Visits (matching storyboard radio cards) */}
-      <div className="w-full space-y-4 my-6">
+      <div className="w-full flex-1 min-h-0 overflow-y-auto space-y-3 my-1 pr-1">
         {PREVIOUS_VISITS.map((visit) => {
           const isSelected = selectedPreviousVisit?.id === visit.id
 
@@ -60,20 +60,18 @@ export const FollowUpPage: React.FC = () => {
               key={visit.id}
               type="button"
               onClick={() => handleSelectVisit(visit)}
-              className={`w-full flex items-center justify-between p-6 rounded-3xl border-2 transition-all cursor-pointer text-left shadow-xs ${
-                isSelected
-                  ? 'bg-[#EBF4EE] border-[#4F8A6D] ring-2 ring-[#4F8A6D]/20'
-                  : 'bg-[#FFFFFF] border-[#D9E2DF] hover:border-[#2F7D73] hover:bg-[#F9FBFA]'
-              }`}
+              className={`w-full flex items-center justify-between p-5 rounded-3xl border-2 transition-all cursor-pointer text-left shadow-xs ${isSelected
+                ? 'bg-[#EBF4EE] border-[#4F8A6D] ring-2 ring-[#4F8A6D]/20'
+                : 'bg-[#FFFFFF] border-[#D9E2DF] hover:border-[#2F7D73] hover:bg-[#F9FBFA]'
+                }`}
             >
               <div className="flex items-center gap-5">
                 {/* Hospital Visit Icon */}
                 <div
-                  className={`w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 ${
-                    isSelected
-                      ? 'bg-[#4F8A6D] text-white shadow-xs'
-                      : 'bg-[#F6F8F7] text-[#647471]'
-                  }`}
+                  className={`w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 ${isSelected
+                    ? 'bg-[#4F8A6D] text-white shadow-xs'
+                    : 'bg-[#F6F8F7] text-[#647471]'
+                    }`}
                 >
                   <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -100,11 +98,10 @@ export const FollowUpPage: React.FC = () => {
 
               {/* Radio Indicator (Green checkmark circle when selected) */}
               <div
-                className={`w-7 h-7 rounded-full flex items-center justify-center border-2 transition-all ${
-                  isSelected
-                    ? 'bg-[#4F8A6D] border-[#4F8A6D] text-white'
-                    : 'border-[#D9E2DF] bg-white'
-                }`}
+                className={`w-7 h-7 rounded-full flex items-center justify-center border-2 transition-all ${isSelected
+                  ? 'bg-[#4F8A6D] border-[#4F8A6D] text-white'
+                  : 'border-[#D9E2DF] bg-white'
+                  }`}
               >
                 {isSelected && (
                   <svg className="w-4 h-4 stroke-current stroke-3" fill="none" viewBox="0 0 24 24">
@@ -118,7 +115,7 @@ export const FollowUpPage: React.FC = () => {
       </div>
 
       {/* Bottom Bar: Back + Hear Again + Next */}
-      <div className="w-full flex items-center justify-between mt-auto pt-4 border-t border-[#D9E2DF]">
+      <div className="w-full flex items-center justify-between mt-auto pt-3 border-t border-[#D9E2DF]">
         <button
           type="button"
           onClick={goBack}

@@ -220,7 +220,7 @@ export const ComplaintPage: React.FC = () => {
   const hasValidResponse = Boolean(chiefComplaint.trim())
 
   return (
-    <div className="flex flex-col items-center justify-between min-h-[calc(100vh-140px)] max-w-4xl w-full mx-auto px-6 py-8 select-none">
+    <div className="flex flex-col items-center justify-between h-full max-w-4xl w-full mx-auto px-6 py-1 select-none">
       {/* Page Heading - Desktop First */}
       <div className="text-center my-3 max-w-2xl">
         <h2 className="text-3xl sm:text-4xl font-bold text-[#243331] mb-2 tracking-tight">
@@ -232,7 +232,7 @@ export const ComplaintPage: React.FC = () => {
       </div>
 
       {/* Main Interaction Area (Desktop-First Wide Card) */}
-      <div className="w-full bg-white border border-[#D9E2DF] rounded-3xl p-8 sm:p-10 shadow-sm my-4 flex flex-col items-center justify-center min-h-[360px]">
+      <div className="w-full bg-white border border-[#D9E2DF] rounded-3xl p-6 sm:p-8 shadow-sm my-2 flex flex-col items-center justify-center min-h-[300px]">
         {/* State 1: INSTRUCTION_PLAYING */}
         {state === 'INSTRUCTION_PLAYING' && (
           <div className="flex flex-col items-center text-center space-y-4 animate-fade-in">
@@ -511,7 +511,7 @@ export const ComplaintPage: React.FC = () => {
       </div>
 
       {/* Bottom Bar: Back + Hear Again + Next (Desktop Layout) */}
-      <div className="w-full flex items-center justify-between mt-auto pt-4 border-t border-[#D9E2DF]">
+      <div className="w-full flex items-center justify-between mt-auto pt-3 border-t border-[#D9E2DF]">
         <button
           type="button"
           onClick={handleBack}

@@ -51,7 +51,7 @@ export const KioskHeader: React.FC<KioskHeaderProps> = () => {
   const totalSteps = 7
 
   return (
-    <header className="w-full bg-[#FFFFFF] border-b border-[#D9E2DF] px-6 py-4 select-none">
+    <header className="w-full bg-[#FFFFFF] border-b border-[#D9E2DF] px-6 py-2.5 select-none flex-shrink-0">
       <div className="max-w-5xl mx-auto">
         {/* Top Branding & Meta Bar */}
         <div className="flex items-center justify-between">
@@ -93,7 +93,7 @@ export const KioskHeader: React.FC<KioskHeaderProps> = () => {
 
         {/* Progress Step Indicator (as shown in storyboard) */}
         {currentRoute !== 'confirmation' && (
-          <div className="mt-4 pt-3 border-t border-[#F1F5F4] flex items-center justify-center">
+          <div className="mt-2.5 pt-2.5 border-t border-[#F1F5F4] flex items-center justify-center">
             <div className="flex items-center gap-2 sm:gap-3">
               {Array.from({ length: totalSteps }).map((_, index) => {
                 const stepNum = index + 1
@@ -104,13 +104,12 @@ export const KioskHeader: React.FC<KioskHeaderProps> = () => {
                   <React.Fragment key={stepNum}>
                     {/* Circle Dot */}
                     <div
-                      className={`w-3.5 h-3.5 rounded-full transition-all duration-300 flex items-center justify-center ${
-                        isCurrent
+                      className={`w-3.5 h-3.5 rounded-full transition-all duration-300 flex items-center justify-center ${isCurrent
                           ? 'bg-[#2F7D73] ring-4 ring-[#DCEDEA] scale-110'
                           : isCompleted
-                          ? 'bg-[#2F7D73]'
-                          : 'bg-[#D9E2DF]'
-                      }`}
+                            ? 'bg-[#2F7D73]'
+                            : 'bg-[#D9E2DF]'
+                        }`}
                     >
                       {isCompleted && (
                         <div className="w-1.5 h-1.5 bg-white rounded-full" />
@@ -120,9 +119,8 @@ export const KioskHeader: React.FC<KioskHeaderProps> = () => {
                     {/* Connecting line between dots */}
                     {stepNum < totalSteps && (
                       <div
-                        className={`w-5 sm:w-8 h-0.5 rounded transition-all duration-300 ${
-                          stepNum < currentStep ? 'bg-[#2F7D73]' : 'bg-[#D9E2DF]'
-                        }`}
+                        className={`w-5 sm:w-8 h-0.5 rounded transition-all duration-300 ${stepNum < currentStep ? 'bg-[#2F7D73]' : 'bg-[#D9E2DF]'
+                          }`}
                       />
                     )}
                   </React.Fragment>

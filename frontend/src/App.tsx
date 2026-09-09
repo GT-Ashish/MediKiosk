@@ -18,12 +18,12 @@ const KioskApp: React.FC = () => {
 
   // Render the sequential patient kiosk flow
   return (
-    <div className="min-h-screen bg-[#F6F8F7] flex flex-col justify-between selection:bg-[#DCEDEA] selection:text-[#2F7D73]">
+    <div className="h-screen bg-[#F6F8F7] flex flex-col justify-between selection:bg-[#DCEDEA] selection:text-[#2F7D73] overflow-hidden">
       {/* Top Header & Step Progress Bar */}
       <KioskHeader />
 
       {/* Main Screen Content */}
-      <main className="flex-1 w-full max-w-5xl mx-auto p-4 flex flex-col justify-center">
+      <main className="flex-1 min-h-0 w-full max-w-5xl mx-auto px-4 py-1.5 flex flex-col justify-center overflow-hidden">
         {currentRoute === 'language' && <LanguagePage />}
         {currentRoute === 'consent' && <ConsentPage />}
         {currentRoute === 'identification' && <IdentificationPage />}
@@ -37,7 +37,7 @@ const KioskApp: React.FC = () => {
       </main>
 
       {/* Clean Bottom Footer Bar (Quick Jump completely removed) */}
-      <footer className="w-full py-3 px-6 border-t border-[#D9E2DF] bg-white text-center text-xs text-[#647471] flex items-center justify-between">
+      <footer className="w-full py-2.5 px-6 border-t border-[#D9E2DF] bg-white text-center text-xs text-[#647471] flex items-center justify-between flex-shrink-0">
         <span>MediKiosk SIH 2026 • AI-Powered Clinical History Platform</span>
         <span className="text-[11px] text-[#8C9E9A]">Patient Terminal Active</span>
       </footer>
