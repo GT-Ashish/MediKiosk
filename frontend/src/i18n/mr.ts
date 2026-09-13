@@ -191,6 +191,19 @@ export const mr: TranslationSchema = {
       'सूचना: हा सारांश डॉक्टरांच्या पुनरावलोकनासाठी तयार केलेला कच्चा मसुदा आहे. हा अंतिम वैद्यकीय निष्कर्ष नाही.',
     instruction:
       'ही तुमच्या भेटीची नोंद आहे. कृपया तपासा. बदल करायचा असल्यास बदल करू शकता, किंवा पुढे जा दाबा.',
+    editChiefComplaintModalTitle: 'मुख्य त्रास बदलायचा का?',
+    editChiefComplaintModalContinue: 'पुढे चालू ठेवा',
+    editChooseMethodPrompt: 'हे उत्तर कसे बदलायचे आहे?',
+    editChooseAnotherMethod: 'दुसरा पर्याय निवडा',
+    noDocsAttached: 'या भेटीसाठी कोणतीही कागदपत्रे जोडलेली नाहीत.',
+    docPreviewLabel: 'मॉक कागदपत्र पूर्वावलोकन • मेडीकियोस्क द्वारे सत्यापित',
+    docPreviewCloseBtn: 'पूर्वावलोकन बंद करा',
+    docViewBtn: 'पहा',
+    sectionPreviousVisit: 'मागील भेटीचा तपशील',
+    fieldPreviousVisitDate: 'भेटीची तारीख',
+    fieldPreviousVisitDept: 'विभाग',
+    fieldPreviousVisitComplaint: 'मूळ त्रास',
+    fieldPreviousVisitDoctor: 'सल्लागार डॉक्टर',
   },
 
   page9_confirmation: {

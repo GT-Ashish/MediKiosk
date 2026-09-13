@@ -18,6 +18,7 @@ export const ReviewSummaryPage: React.FC = () => {
     historyAnswers,
     updateHistoryAnswer,
     editChiefComplaintFlow,
+    selectedPreviousVisit,
     documents,
     goTo,
     goBack,
@@ -282,35 +283,35 @@ export const ReviewSummaryPage: React.FC = () => {
             </dl>
           </div>
 
-          {/* Section 2: Key Points from Conversation */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-lg font-bold text-[#243331] flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#2F7D73]" />
-                {t.page8_review.sectionKeyPoints}
-              </h3>
-            </div>
+          {/* Section 2: Key Points from Conversation (New Problem) OR Previous Visit Details (Follow-up) */}
+          {isNewProblem ? (
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-bold text-[#243331] flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#2F7D73]" />
+                  {t.page8_review.sectionKeyPoints}
+                </h3>
+              </div>
 
-            <div className="space-y-2.5 bg-[#F6F8F7] p-4 sm:p-5 rounded-2xl border border-[#EBF0EE]">
-              {keyPointsList.map((pt) => (
-                <div
-                  key={pt.key}
-                  className="flex items-center justify-between p-3.5 bg-white rounded-2xl border border-[#EBF0EE] shadow-2xs gap-3"
-                >
-                  <div className="flex items-start gap-2.5 flex-1">
-                    <span className="text-[#2F7D73] font-bold text-lg leading-none mt-0.5">•</span>
-                    <div>
-                      <span className="text-xs font-bold uppercase tracking-wider text-[#647471] block">
-                        {pt.label}
-                      </span>
-                      <span className="text-base font-semibold text-[#243331]">
-                        {pt.value}
-                      </span>
+              <div className="space-y-2.5 bg-[#F6F8F7] p-4 sm:p-5 rounded-2xl border border-[#EBF0EE]">
+                {keyPointsList.map((pt) => (
+                  <div
+                    key={pt.key}
+                    className="flex items-center justify-between p-3.5 bg-white rounded-2xl border border-[#EBF0EE] shadow-2xs gap-3"
+                  >
+                    <div className="flex items-start gap-2.5 flex-1">
+                      <span className="text-[#2F7D73] font-bold text-lg leading-none mt-0.5">•</span>
+                      <div>
+                        <span className="text-xs font-bold uppercase tracking-wider text-[#647471] block">
+                          {pt.label}
+                        </span>
+                        <span className="text-base font-semibold text-[#243331]">
+                          {pt.value}
+                        </span>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Item 10 & 13: Only show Edit if New Problem */}
-                  {isNewProblem && (
+                    {/* Item 13: Edit key points (only for new problem) */}
                     <button
                       type="button"
                       onClick={() => handleOpenEditKeyPoint(pt.key, pt.value)}
@@ -321,11 +322,46 @@ export const ReviewSummaryPage: React.FC = () => {
                       </svg>
                       <span>{t.common.edit}</span>
                     </button>
-                  )}
-                </div>
-              ))}
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          ) : (
+            /* Follow-up branch: Show previous visit details (view-only) */
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-bold text-[#243331] flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#2F7D73]" />
+                  {t.page8_review.sectionPreviousVisit}
+                </h3>
+              </div>
+
+              {selectedPreviousVisit ? (
+                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-6 text-sm sm:text-base bg-[#F6F8F7] p-4 sm:p-5 rounded-2xl border border-[#EBF0EE]">
+                  <div>
+                    <dt className="text-xs uppercase font-bold text-[#647471] tracking-wider mb-0.5">{t.page8_review.fieldPreviousVisitDate}</dt>
+                    <dd className="font-bold text-[#243331] text-lg">{selectedPreviousVisit.date}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs uppercase font-bold text-[#647471] tracking-wider mb-0.5">{t.page8_review.fieldPreviousVisitDept}</dt>
+                    <dd className="font-semibold text-[#243331] text-lg">{selectedPreviousVisit.department}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs uppercase font-bold text-[#647471] tracking-wider mb-0.5">{t.page8_review.fieldPreviousVisitComplaint}</dt>
+                    <dd className="font-semibold text-[#2F7D73] text-lg">{selectedPreviousVisit.complaint}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs uppercase font-bold text-[#647471] tracking-wider mb-0.5">{t.page8_review.fieldPreviousVisitDoctor}</dt>
+                    <dd className="font-semibold text-[#243331] text-lg">{selectedPreviousVisit.doctor}</dd>
+                  </div>
+                </dl>
+              ) : (
+                <p className="text-sm text-[#647471] italic p-4 bg-[#F6F8F7] rounded-2xl border border-[#EBF0EE]">
+                  No previous visit selected.
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Section 3: Uploaded Documents */}
           <div>
@@ -353,13 +389,13 @@ export const ReviewSummaryPage: React.FC = () => {
                       onClick={() => setViewingDoc(doc.title)}
                       className="text-xs font-semibold text-[#2563EB] hover:underline cursor-pointer"
                     >
-                      👁 View
+                      👁 {t.page8_review.docViewBtn}
                     </button>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-[#647471] italic">No prior documents attached for this visit.</p>
+              <p className="text-sm text-[#647471] italic">{t.page8_review.noDocsAttached}</p>
             )}
           </div>
 
@@ -413,7 +449,7 @@ export const ReviewSummaryPage: React.FC = () => {
               </svg>
             </div>
             <h3 className="text-xl font-bold text-[#243331] mb-2">
-              Edit Chief Complaint?
+              {t.page8_review.editChiefComplaintModalTitle}
             </h3>
             <p className="text-sm text-[#647471] mb-6">
               {t.page8_review.editChiefComplaintNotice}
@@ -431,7 +467,7 @@ export const ReviewSummaryPage: React.FC = () => {
                 onClick={handleConfirmChiefComplaintEdit}
                 className="flex-1 py-3 bg-[#2F7D73] text-white font-bold rounded-xl text-base hover:bg-[#276B63] shadow-md cursor-pointer"
               >
-                Continue
+                {t.page8_review.editChiefComplaintModalContinue}
               </button>
             </div>
           </div>
@@ -453,7 +489,7 @@ export const ReviewSummaryPage: React.FC = () => {
             {editMode === 'choose' && (
               <div className="space-y-4">
                 <p className="text-sm text-[#647471]">
-                  How would you like to update this answer?
+                  {t.page8_review.editChooseMethodPrompt}
                 </p>
                 <div className="grid grid-cols-2 gap-4">
                   {/* Voice Button */}
@@ -546,7 +582,7 @@ export const ReviewSummaryPage: React.FC = () => {
                   onClick={() => setEditMode('choose')}
                   className="text-xs text-[#647471] hover:underline pt-2 cursor-pointer"
                 >
-                  Choose another method
+                  {t.page8_review.editChooseAnotherMethod}
                 </button>
               </div>
             )}
@@ -599,7 +635,7 @@ export const ReviewSummaryPage: React.FC = () => {
               </svg>
             </div>
             <h3 className="text-lg font-bold text-[#243331] mb-1">{viewingDoc}</h3>
-            <p className="text-xs text-[#647471] mb-4">Mock Document Preview • Verified by MediKiosk</p>
+            <p className="text-xs text-[#647471] mb-4">{t.page8_review.docPreviewLabel}</p>
             <div className="h-40 bg-[#F6F8F7] border border-[#D9E2DF] rounded-xl flex items-center justify-center text-xs text-[#647471] mb-4 p-4">
               [Simulated Document Content: CBC & Metabolic Profile Within Normal Limits]
             </div>
@@ -608,7 +644,7 @@ export const ReviewSummaryPage: React.FC = () => {
               onClick={() => setViewingDoc(null)}
               className="w-full py-3 bg-[#2F7D73] text-white font-bold rounded-xl text-sm cursor-pointer"
             >
-              Close Preview
+              {t.page8_review.docPreviewCloseBtn}
             </button>
           </div>
         </div>

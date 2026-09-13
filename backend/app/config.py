@@ -44,6 +44,15 @@ class Settings(BaseSettings):
         """Parse CORS_ORIGINS comma-separated string into a list."""
         return [origin.strip() for origin in self.cors_origins.split(",")]
 
+    # ── Database ───────────────────────────────────────────────────────────────
+    database_url: str = "sqlite+aiosqlite:///./medikiosk_dev.db"
+    """
+    SQLAlchemy async database URL.
+    Default: SQLite for local development (no PostgreSQL needed to start).
+    Production: postgresql+asyncpg://user:password@host:5432/medikiosk
+    Env var: DATABASE_URL
+    """
+
     # ── Session ────────────────────────────────────────────────────────────────
     session_ttl_minutes: int = 60
     """

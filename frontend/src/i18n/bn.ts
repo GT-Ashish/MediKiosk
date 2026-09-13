@@ -191,6 +191,19 @@ export const bn: TranslationSchema = {
       'বিজ্ঞপ্তি: এই সংক্ষিপ্ত বিবরণটি আপনার ডাক্তারের পর্যালোচনার জন্য একটি খসড়া। এটি কোনো চূড়ান্ত রোগ নির্ণয় নয়।',
     instruction:
       'এটি আপনার সাক্ষাতের বিবরণ। অনুগ্রহ করে যাচাই করুন। পরিবর্তন করতে পারেন, অথবা পরবর্তী বোতাম টিপুন।',
+    editChiefComplaintModalTitle: 'মূল সমস্যা পরিবর্তন করবেন?',
+    editChiefComplaintModalContinue: 'চালিয়ে যান',
+    editChooseMethodPrompt: 'আপনি কিভাবে এই উত্তরটি পরিবর্তন করতে চান?',
+    editChooseAnotherMethod: 'অন্য পদ্ধতি বেছে নিন',
+    noDocsAttached: 'এই সাক্ষাতের জন্য কোনো নথি সংযুক্ত করা হয়নি।',
+    docPreviewLabel: 'মক নথি পূর্বদর্শন • মেডিকিয়স্ক দ্বারা যাচাইকৃত',
+    docPreviewCloseBtn: 'পূর্বদর্শন বন্ধ করুন',
+    docViewBtn: 'দেখুন',
+    sectionPreviousVisit: 'পূর্ববর্তী ভিজিটের বিবরণ',
+    fieldPreviousVisitDate: 'ভিজিটের তারিখ',
+    fieldPreviousVisitDept: 'বিভাগ',
+    fieldPreviousVisitComplaint: 'মূল সমস্যা',
+    fieldPreviousVisitDoctor: 'পরামর্শক চিকিৎসক',
   },
 
   page9_confirmation: {

@@ -191,6 +191,19 @@ export const en: TranslationSchema = {
       'Notice: This structured summary is a draft prepared for your physician to review and edit during your consultation. It does not constitute a clinical diagnosis.',
     instruction:
       'Here is what we understood from your visit. Please review the details. You can make changes, or press Next to confirm.',
+    editChiefComplaintModalTitle: 'Edit Chief Complaint?',
+    editChiefComplaintModalContinue: 'Continue',
+    editChooseMethodPrompt: 'How would you like to update this answer?',
+    editChooseAnotherMethod: 'Choose another method',
+    noDocsAttached: 'No prior documents attached for this visit.',
+    docPreviewLabel: 'Mock Document Preview • Verified by MediKiosk',
+    docPreviewCloseBtn: 'Close Preview',
+    docViewBtn: 'View',
+    sectionPreviousVisit: 'Previous Visit Details',
+    fieldPreviousVisitDate: 'Visit Date',
+    fieldPreviousVisitDept: 'Department',
+    fieldPreviousVisitComplaint: 'Original Complaint',
+    fieldPreviousVisitDoctor: 'Consulting Doctor',
   },
 
   page9_confirmation: {

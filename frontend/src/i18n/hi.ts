@@ -191,6 +191,19 @@ export const hi: TranslationSchema = {
       'सूचना: यह संरचित सारांश आपके डॉक्टर के समीक्षा हेतु एक मसौदा (ड्राफ्ट) है। यह अंतिम चिकित्सकीय निदान नहीं है।',
     instruction:
       'यह आपकी भेंट का विवरण है। कृपया समीक्षा करें। आप संशोधन कर सकते हैं, अथवा पुष्टि के लिए आगे बढ़ें दबाएं।',
+    editChiefComplaintModalTitle: 'मुख्य समस्या बदलें?',
+    editChiefComplaintModalContinue: 'जारी रखें',
+    editChooseMethodPrompt: 'आप यह उत्तर कैसे बदलना चाहेंगे?',
+    editChooseAnotherMethod: 'अन्य विकल्प चुनें',
+    noDocsAttached: 'इस भेंट के लिए कोई दस्तावेज़ संलग्न नहीं है।',
+    docPreviewLabel: 'मॉक दस्तावेज़ पूर्वावलोकन • मेडीकियोस्क द्वारा सत्यापित',
+    docPreviewCloseBtn: 'पूर्वावलोकन बंद करें',
+    docViewBtn: 'देखें',
+    sectionPreviousVisit: 'पिछली भेंट का विवरण',
+    fieldPreviousVisitDate: 'भेंट की तारीख',
+    fieldPreviousVisitDept: 'विभाग',
+    fieldPreviousVisitComplaint: 'मूल समस्या',
+    fieldPreviousVisitDoctor: 'परामर्श चिकित्सक',
   },
 
   page9_confirmation: {

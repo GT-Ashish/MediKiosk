@@ -38,6 +38,7 @@ frontend/build/
 # Backend
 backend/*.db
 backend/*.sqlite3
+*.db
 
 # AI model files (large binaries)
 ai/models/*.bin

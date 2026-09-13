@@ -5,6 +5,13 @@ pydantic
 pydantic-settings
 python-dotenv
 
+# Database (Phase 6)
+sqlalchemy[asyncio]>=2.0    # ORM + async support
+asyncpg                     # PostgreSQL async driver
+alembic                     # Database migrations
+aiosqlite                   # Async SQLite for development and testing
+
 # Testing (required by AGENTS.md rule 11)
 pytest
+pytest-asyncio              # Async test support
 httpx

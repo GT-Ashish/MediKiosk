@@ -1,21 +1,25 @@
 """
 MediKiosk Infrastructure — Repositories.
 
-Repository classes will be implemented here in Phase 6 (PostgreSQL + SQLAlchemy).
-
-Each repository will implement a corresponding service protocol interface,
-providing database-backed persistence for sessions, history, documents, etc.
-
-Planned repositories (Phase 6):
-    SessionRepository     — implements SessionService protocol
-    HistoryRepository     — implements HistoryService protocol
-    DocumentRepository    — implements DocumentService protocol
-    SummaryRepository     — implements SummaryService protocol
-    ReviewRepository      — implements ReviewService protocol
+SQLAlchemy-backed repository implementations for Phase 6.
+Each repository implements persistence for a domain concept and handles
+mapping between ORM models and Pydantic domain schemas.
 
 Design pattern:
-    Each repository takes a database session (AsyncSession) via dependency injection.
+    Each repository takes an AsyncSession via constructor injection.
     The FastAPI dependency system wires the session per-request.
-
-Current status: Empty — awaiting Phase 6.
 """
+
+from app.infrastructure.repositories.session_repo import SQLAlchemySessionRepository
+from app.infrastructure.repositories.consent_repo import SQLAlchemyConsentRepository
+from app.infrastructure.repositories.visit_repo import SQLAlchemyVisitRepository
+from app.infrastructure.repositories.history_repo import SQLAlchemyHistoryRepository
+from app.infrastructure.repositories.document_repo import SQLAlchemyDocumentRepository
+
+__all__ = [
+    "SQLAlchemySessionRepository",
+    "SQLAlchemyConsentRepository",
+    "SQLAlchemyVisitRepository",
+    "SQLAlchemyHistoryRepository",
+    "SQLAlchemyDocumentRepository",
+]

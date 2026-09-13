@@ -185,6 +185,21 @@ export interface TranslationSchema {
     typeOption: string
     disclaimer: string
     instruction: string
+    // Modal & interaction strings
+    editChiefComplaintModalTitle: string
+    editChiefComplaintModalContinue: string
+    editChooseMethodPrompt: string
+    editChooseAnotherMethod: string
+    noDocsAttached: string
+    docPreviewLabel: string
+    docPreviewCloseBtn: string
+    docViewBtn: string
+    // Follow-up specific
+    sectionPreviousVisit: string
+    fieldPreviousVisitDate: string
+    fieldPreviousVisitDept: string
+    fieldPreviousVisitComplaint: string
+    fieldPreviousVisitDoctor: string
   }
 
   page9_confirmation: {
