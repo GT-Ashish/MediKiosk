@@ -1,0 +1,286 @@
+template_id: headache
+version: "1.0.0"
+status: demo_non_production
+
+terminology:
+  system: SNOMED_CT
+  code: "25064002"
+  display: "Headache"
+
+question_budget:
+  min_questions: 10
+  max_questions: 15
+
+general_modules:
+  - general_history
+
+slots:
+
+  - id: onset
+    type: text
+    required: true
+    priority: 1
+    description: >
+      When headache began and whether maximum intensity
+      was reached suddenly.
+
+  - id: time_to_peak
+    type: duration
+    required: false
+    priority: 2
+    unit: minutes
+    min: 0
+    max: 1440
+    description: >
+      Approximate time from headache onset to maximum intensity,
+      normalized to minutes. Preserve seconds in extraction and convert
+      to decimal minutes (e.g. 30 seconds = 0.5 minutes).
+
+  - id: temporal_course
+    type: enum
+    required: true
+    priority: 3
+    allowed_values:
+      - first_episode
+      - recurrent
+      - constant
+      - intermittent
+      - worsening
+      - improving
+      - unchanged
+      - unknown
+    description: Overall pattern.
+
+  - id: location
+    type: text
+    required: true
+    priority: 4
+    description: Where headache is felt.
+
+  - id: character
+    type: enum
+    required: true
+    priority: 5
+    allowed_values:
+      - throbbing
+      - pulsating
+      - pressure
+      - tight_band
+      - sharp
+      - stabbing
+      - burning
+      - other
+      - unknown
+    description: Headache quality.
+
+  - id: severity
+    type: integer
+    required: true
+    priority: 6
+    min: 0
+    max: 10
+    description: Severity on 0-10 scale.
+
+  - id: duration_of_episode
+    type: duration
+    required: false
+    priority: 7
+    description: Duration of an individual episode.
+
+  - id: aggravating_or_relieving_factors
+    type: text
+    required: false
+    priority: 8
+    description: >
+      Activity, position, sleep, food, hydration or medicines
+      affecting symptoms.
+
+  - id: nausea_or_vomiting
+    type: boolean
+    required: false
+    priority: 9
+    description: Nausea/vomiting.
+
+  - id: light_or_sound_sensitivity
+    type: text
+    required: false
+    priority: 10
+    description: Sensitivity to light, sound, smell or other sensory triggers.
+
+  - id: visual_or_neurologic_symptoms
+    type: text
+    required: false
+    priority: 11
+    description: >
+      Visual disturbance or neurologic symptoms described
+      by the patient.
+
+  - id: new_neurologic_deficit_present
+    type: boolean
+    required: false
+    priority: 11
+    description: >
+      New focal neurologic symptom such as weakness, numbness,
+      speech difficulty, seizure, severe imbalance or new major
+      visual disturbance.
+
+  - id: fever_or_neck_stiffness
+    type: text
+    required: false
+    priority: 12
+    description: Fever or neck symptoms described by the patient.
+
+  - id: fever_present
+    type: boolean
+    required: false
+    priority: 12
+    description: Fever reported with the headache.
+
+  - id: neck_stiffness_present
+    type: boolean
+    required: false
+    priority: 12
+    description: Marked/severe neck stiffness reported with the headache.
+
+  - id: eye_symptoms
+    type: text
+    required: false
+    priority: 13
+    description: Eye symptoms described by the patient.
+
+  - id: severe_eye_symptom_present
+    type: boolean
+    required: false
+    priority: 13
+    description: >
+      Acute severe eye pain, red eye with visual symptoms, halos,
+      or sudden visual loss.
+
+  - id: trauma_history
+    type: text
+    required: false
+    priority: 14
+    description: Recent head injury or significant trauma.
+
+  - id: headache_history
+    type: text
+    required: false
+    priority: 15
+    description: >
+      Previous similar headaches, prior migraine diagnosis,
+      frequency and change from usual pattern.
+
+context_modules:
+
+  - id: migraine_context
+    triggers:
+      - recurrent_similar_headache
+      - sensory_sensitivity
+    slots:
+      - id: migraine_pattern_detail
+        type: text
+        required: false
+        priority: 30
+        description: >
+          Recurrent headache pattern, sensory sensitivity,
+          nausea, triggers and prior similar episodes.
+
+  - id: neurologic_context
+    triggers:
+      - neurologic_symptom
+      - thunderclap_pattern
+    slots:
+      - id: neurologic_detail
+        type: text
+        required: false
+        priority: 31
+        description: >
+          Timing/nature of weakness, numbness, speech/vision change,
+          seizure, confusion or loss of consciousness.
+
+  - id: systemic_context
+    triggers:
+      - fever_with_headache
+      - immunosuppression
+      - new_headache_later_life
+    slots:
+      - id: systemic_risk_detail
+        type: text
+        required: false
+        priority: 32
+        description: >
+          Fever/infection context, immune suppression or other
+          major systemic risk context.
+
+triggers:
+
+  - id: thunderclap_pattern
+    description: >
+      Sudden headache reaching maximum intensity within seconds
+      to minutes. Trigger should be proposed only when the transcript
+      supports abrupt onset; the backend validates the tag.
+
+  - id: neurologic_symptom
+    description: >
+      New weakness, numbness, speech difficulty, confusion, seizure,
+      severe imbalance or major visual disturbance.
+
+  - id: fever_with_headache
+    description: Headache with fever/systemic infection symptoms.
+
+  - id: recurrent_similar_headache
+    description: Substantially similar headaches previously.
+
+  - id: sensory_sensitivity
+    description: Headache with light, sound or smell sensitivity.
+
+  - id: immunosuppression
+    description: Major immune suppression or relevant treatment.
+
+  - id: new_headache_later_life
+    description: >
+      New headache later in life; deployment must configure the age threshold.
+
+red_flags:
+
+  - id: thunderclap_headache
+    severity: critical
+    when:
+      all_of:
+        - slot: time_to_peak
+          lte: 5
+    action: urgent_clinician_review
+
+  - id: headache_with_new_neurologic_symptoms
+    severity: critical
+    when:
+      all_of:
+        - slot: new_neurologic_deficit_present
+          equals: true
+    action: urgent_clinician_review
+
+  - id: headache_with_fever_or_neck_stiffness
+    severity: critical
+    when:
+      any_of:
+        - slot: fever_present
+          equals: true
+        - slot: neck_stiffness_present
+          equals: true
+    action: urgent_clinician_review
+
+  - id: headache_after_head_trauma
+    severity: high
+    when:
+      all_of:
+        - slot: trauma_history
+          not_empty: true
+    action: prompt_clinician_review
+
+  - id: acute_headache_with_eye_warning
+    severity: high
+    when:
+      all_of:
+        - slot: severe_eye_symptom_present
+          equals: true
+    action: urgent_clinician_review

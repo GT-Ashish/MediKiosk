@@ -1,0 +1,184 @@
+template_id: cough
+version: "1.0.0"
+status: demo_non_production
+
+terminology:
+  system: SNOMED_CT
+  code: "49727002"
+  display: "Cough"
+
+question_budget:
+  min_questions: 9
+  max_questions: 14
+
+general_modules:
+  - general_history
+
+slots:
+
+  - id: onset
+    type: text
+    required: true
+    priority: 1
+    description: When cough began.
+
+  - id: duration
+    type: duration
+    required: true
+    priority: 2
+    description: How long cough has been present.
+
+  - id: course
+    type: enum
+    required: true
+    priority: 3
+    allowed_values:
+      - improving
+      - worsening
+      - unchanged
+      - intermittent
+      - recurrent
+      - unknown
+    description: Change since onset.
+
+  - id: cough_type
+    type: enum
+    required: true
+    priority: 4
+    allowed_values:
+      - dry
+      - productive
+      - mixed
+      - unknown
+    description: Dry or produces sputum.
+
+  - id: sputum_detail
+    type: text
+    required: false
+    priority: 5
+    description: Amount/color/consistency/change in sputum.
+
+  - id: hemoptysis
+    type: boolean
+    required: true
+    priority: 6
+    description: Coughing up blood or blood-streaked sputum.
+
+  - id: shortness_of_breath
+    type: boolean
+    required: true
+    priority: 7
+    description: Difficulty breathing/breathlessness.
+
+  - id: chest_pain
+    type: boolean
+    required: false
+    priority: 8
+    description: Chest pain/discomfort with illness or cough.
+
+  - id: fever_or_chills
+    type: boolean
+    required: false
+    priority: 9
+    description: Feverishness/chills.
+
+  - id: wheeze
+    type: boolean
+    required: false
+    priority: 10
+    description: Wheezing/whistling breathing.
+
+  - id: upper_respiratory_symptoms
+    type: text
+    required: false
+    priority: 11
+    description: >
+      Runny/stuffy nose, sore throat, postnasal symptoms or hoarseness.
+
+  - id: smoking_or_nicotine_exposure
+    type: text
+    required: false
+    priority: 12
+    description: >
+      Current/past smoking or inhaled nicotine/tobacco exposure.
+
+  - id: occupational_or_environmental_exposure
+    type: text
+    required: false
+    priority: 13
+    description: >
+      Dust, fumes, chemicals, biomass smoke or occupational inhalation exposure.
+
+  - id: prior_respiratory_history
+    type: text
+    required: false
+    priority: 14
+    description: >
+      Asthma, COPD, recurrent pneumonia, tuberculosis history/exposure
+      or other lung history.
+
+context_modules:
+
+  - id: obstructive_airway_context
+    triggers:
+      - wheeze_or_recurrent_airway_symptoms
+    slots:
+      - id: airway_disease_history
+        type: text
+        required: false
+        priority: 30
+        description: >
+          Prior asthma/COPD or recurrent wheeze and relevant inhaler use.
+
+  - id: infectious_exposure_context
+    triggers:
+      - fever_with_cough
+      - sick_contact
+      - tuberculosis_exposure
+    slots:
+      - id: infectious_exposure_detail
+        type: text
+        required: false
+        priority: 31
+        description: >
+          Respiratory sick contacts, recent illness or TB exposure.
+
+triggers:
+
+  - id: fever_with_cough
+    description: Cough with fever/chills.
+
+  - id: wheeze_or_recurrent_airway_symptoms
+    description: Wheeze or recurrent airway symptoms.
+
+  - id: sick_contact
+    description: Recent close contact with respiratory illness.
+
+  - id: tuberculosis_exposure
+    description: Known close TB exposure or relevant prior TB history.
+
+red_flags:
+
+  - id: coughing_blood
+    severity: critical
+    when:
+      all_of:
+        - slot: hemoptysis
+          equals: true
+    action: urgent_clinician_review
+
+  - id: cough_with_breathing_difficulty
+    severity: critical
+    when:
+      all_of:
+        - slot: shortness_of_breath
+          equals: true
+    action: urgent_clinician_review
+
+  - id: cough_with_chest_pain
+    severity: high
+    when:
+      all_of:
+        - slot: chest_pain
+          equals: true
+    action: prompt_clinician_review

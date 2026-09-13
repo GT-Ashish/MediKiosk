@@ -1,0 +1,229 @@
+template_id: chest_pain
+version: "1.0.0"
+status: demo_non_production
+
+terminology:
+  system: SNOMED_CT
+  code: "29857009"
+  display: "Chest pain"
+
+question_budget:
+  min_questions: 9
+  max_questions: 14
+
+general_modules:
+  - general_history
+
+slots:
+
+  - id: onset
+    type: text
+    required: true
+    priority: 1
+    description: >
+      When pain/discomfort began; sudden or gradual.
+
+  - id: temporal_course
+    type: enum
+    required: true
+    priority: 2
+    allowed_values:
+      - constant
+      - intermittent
+      - recurrent_episodes
+      - first_episode
+      - worsening
+      - improving
+      - unchanged
+      - unknown
+    description: Pattern since onset.
+
+  - id: duration_of_episodes
+    type: duration
+    required: false
+    priority: 3
+    description: Duration of each episode when intermittent.
+
+  - id: location
+    type: text
+    required: true
+    priority: 4
+    description: Where the patient feels the discomfort.
+
+  - id: character
+    type: enum
+    required: true
+    priority: 5
+    allowed_values:
+      - pressure
+      - squeezing
+      - heaviness
+      - tightness
+      - burning
+      - sharp
+      - stabbing
+      - aching
+      - other
+      - unknown
+    description: Patient's description of quality.
+
+  - id: severity
+    type: integer
+    required: true
+    priority: 6
+    min: 0
+    max: 10
+    description: Current/typical severity on 0-10 scale.
+
+  - id: radiation
+    type: text
+    required: false
+    priority: 7
+    description: >
+      Spread to arm(s), shoulder, back, neck, jaw,
+      upper abdomen or elsewhere.
+
+  - id: exertional_or_activity_relation
+    type: text
+    required: false
+    priority: 8
+    description: Relation to walking, stairs, exercise or rest.
+
+  - id: breathing_relation
+    type: text
+    required: false
+    priority: 9
+    description: Change with breathing or associated breathing difficulty.
+
+  - id: associated_shortness_of_breath
+    type: boolean
+    required: true
+    priority: 10
+    description: Shortness of breath with the complaint.
+
+  - id: associated_sweating
+    type: boolean
+    required: false
+    priority: 11
+    description: Unusual sweating with the complaint.
+
+  - id: associated_nausea_vomiting
+    type: boolean
+    required: false
+    priority: 12
+    description: Nausea or vomiting with the complaint.
+
+  - id: associated_dizziness_or_fainting
+    type: boolean
+    required: false
+    priority: 13
+    description: Dizziness, near-fainting or fainting.
+
+  - id: previous_cardiac_history
+    type: text
+    required: false
+    priority: 14
+    description: Known heart disease, previous cardiac event or cardiac procedure.
+
+context_modules:
+
+  - id: cardiovascular_history
+    triggers:
+      - known_heart_disease
+      - exertional_chest_discomfort
+      - chest_discomfort_with_dyspnea
+      - radiation_to_arm_or_jaw
+
+    slots:
+
+      - id: cardiovascular_history_detail
+        type: text
+        required: false
+        priority: 30
+        description: Known cardiovascular disease/events/procedures.
+
+      - id: cardiovascular_risk_context
+        type: text
+        required: false
+        priority: 31
+        description: >
+          Relevant tobacco, diabetes, hypertension, cholesterol
+          or family-risk context.
+
+  - id: respiratory_history
+    triggers:
+      - chest_discomfort_with_dyspnea
+      - pleuritic_feature
+      - cough_with_chest_discomfort
+
+    slots:
+
+      - id: respiratory_history_detail
+        type: text
+        required: false
+        priority: 32
+        description: >
+          Asthma/COPD, lung disease, recent respiratory illness
+          or relevant respiratory history.
+
+triggers:
+
+  - id: exertional_chest_discomfort
+    description: >
+      Symptoms occur with exertion/activity or improve with rest.
+
+  - id: chest_discomfort_with_dyspnea
+    description: >
+      Chest discomfort accompanied by shortness of breath.
+
+  - id: radiation_to_arm_or_jaw
+    description: >
+      Radiation to arm, shoulder, neck, jaw or back.
+
+  - id: pleuritic_feature
+    description: Pain clearly affected by breathing.
+
+  - id: cough_with_chest_discomfort
+    description: Cough with chest discomfort.
+
+  - id: known_heart_disease
+    description: Established heart disease or previous cardiac event/procedure.
+
+red_flags:
+
+  - id: chest_pain_with_breathing_difficulty
+    severity: critical
+    when:
+      all_of:
+        - slot: associated_shortness_of_breath
+          equals: true
+    action: urgent_clinician_review
+
+  - id: chest_pain_with_fainting
+    severity: critical
+    when:
+      all_of:
+        - slot: associated_dizziness_or_fainting
+          equals: true
+    action: urgent_clinician_review
+
+  - id: severe_chest_pain
+    severity: high
+    when:
+      all_of:
+        - slot: severity
+          gte: 8
+    action: urgent_clinician_review
+
+  - id: chest_pain_with_arm_or_jaw_radiation
+    severity: high
+    when:
+      all_of:
+        - slot: radiation
+          contains_any:
+            - arm
+            - shoulder
+            - jaw
+            - neck
+            - back
+    action: urgent_clinician_review

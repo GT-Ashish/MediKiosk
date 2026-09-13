@@ -1,0 +1,238 @@
+template_id: fever
+version: "1.0.0"
+status: demo_non_production
+
+terminology:
+  system: SNOMED_CT
+  code: "386661006"
+  display: "Fever"
+
+question_budget:
+  min_questions: 9
+  max_questions: 14
+
+general_modules:
+  - general_history
+
+slots:
+
+  - id: onset
+    type: text
+    required: true
+    priority: 1
+    description: When feverishness/measured fever began.
+
+  - id: measured_temperature
+    type: decimal
+    required: false
+    priority: 2
+    min: 35
+    max: 45
+    unit: celsius
+    description: >
+      Highest measured temperature and how it was measured when known.
+
+  - id: fever_pattern
+    type: enum
+    required: false
+    priority: 3
+    allowed_values:
+      - continuous
+      - intermittent
+      - recurrent
+      - unknown
+    description: How fever comes and goes.
+
+  - id: chills_or_rigors
+    type: boolean
+    required: false
+    priority: 4
+    description: Chills or shaking chills.
+
+  - id: respiratory_symptoms
+    type: text
+    required: false
+    priority: 5
+    description: >
+      Cough, sore throat, nasal symptoms or other respiratory symptoms.
+
+  - id: breathing_difficulty_present
+    type: boolean
+    required: false
+    priority: 5
+    description: >
+      Patient reports difficulty breathing or shortness of breath
+      with the febrile illness.
+
+  - id: urinary_symptoms
+    type: text
+    required: false
+    priority: 6
+    description: >
+      Dysuria, frequency, urgency, flank pain or other urinary symptoms.
+
+  - id: gastrointestinal_symptoms
+    type: text
+    required: false
+    priority: 7
+    description: >
+      Nausea, vomiting, diarrhea, abdominal pain or other GI symptoms.
+
+  - id: skin_or_wound_symptoms
+    type: text
+    required: false
+    priority: 8
+    description: >
+      Rash, wound, redness, swelling or drainage.
+
+  - id: headache_or_neck_symptoms
+    type: text
+    required: false
+    priority: 9
+    description: >
+      Headache or other neurologic/systemic symptoms described
+      by the patient.
+
+  - id: confusion_present
+    type: boolean
+    required: false
+    priority: 9
+    description: >
+      New confusion or altered mental status reported by the
+      patient or caregiver.
+
+  - id: severe_neck_stiffness_present
+    type: boolean
+    required: false
+    priority: 9
+    description: >
+      Marked/severe neck stiffness reported by the patient.
+
+  - id: recent_exposure_history
+    type: text
+    required: false
+    priority: 10
+    description: >
+      Sick contacts, travel, mosquito, animal, food/water or
+      occupational exposure when relevant.
+
+  - id: recent_medications
+    type: text
+    required: false
+    priority: 11
+    description: >
+      New medicines, recent antibiotics or relevant medicines.
+
+  - id: immune_risk_context
+    type: text
+    required: false
+    priority: 12
+    description: >
+      Major immune-risk context such as cancer treatment,
+      transplant or immunosuppressive therapy.
+
+  - id: immune_suppressed
+    type: boolean
+    required: false
+    priority: 12
+    description: Patient has a major immune-suppression risk context.
+
+  - id: hydration_or_intake
+    type: text
+    required: false
+    priority: 13
+    description: >
+      Ability to drink, keep fluids down, and maintain urine output.
+
+  - id: unable_to_keep_fluids_down
+    type: boolean
+    required: false
+    priority: 13
+    description: >
+      Patient cannot keep fluids down or reports markedly reduced intake.
+
+context_modules:
+
+  - id: respiratory_context
+    triggers:
+      - respiratory_symptom_cluster
+    slots:
+      - id: respiratory_symptom_detail
+        type: text
+        required: false
+        priority: 30
+        description: More detail about respiratory symptoms.
+
+  - id: travel_vector_context
+    triggers:
+      - mosquito_exposure
+      - recent_travel
+    slots:
+      - id: travel_or_vector_detail
+        type: text
+        required: false
+        priority: 31
+        description: Travel location/timing and relevant vector/exposure detail.
+
+  - id: urinary_context
+    triggers:
+      - urinary_symptom_cluster
+    slots:
+      - id: urinary_symptom_detail
+        type: text
+        required: false
+        priority: 32
+        description: More detail about urinary/flank symptoms.
+
+triggers:
+
+  - id: respiratory_symptom_cluster
+    description: >
+      Fever with cough, sore throat, nasal or breathing symptoms.
+
+  - id: urinary_symptom_cluster
+    description: >
+      Fever with urinary symptoms or flank pain.
+
+  - id: mosquito_exposure
+    description: Meaningful recent mosquito exposure.
+
+  - id: recent_travel
+    description: Recent travel relevant to febrile illness.
+
+  - id: immune_suppression
+    description: Major immune-risk condition or treatment.
+
+red_flags:
+
+  - id: fever_with_confusion
+    severity: critical
+    when:
+      all_of:
+        - slot: confusion_present
+          equals: true
+    action: urgent_clinician_review
+
+  - id: fever_with_severe_neck_stiffness
+    severity: critical
+    when:
+      all_of:
+        - slot: severe_neck_stiffness_present
+          equals: true
+    action: urgent_clinician_review
+
+  - id: fever_with_breathing_difficulty
+    severity: critical
+    when:
+      all_of:
+        - slot: breathing_difficulty_present
+          equals: true
+    action: urgent_clinician_review
+
+  - id: fever_with_inability_to_keep_fluids
+    severity: high
+    when:
+      all_of:
+        - slot: unable_to_keep_fluids_down
+          equals: true
+    action: urgent_clinician_review

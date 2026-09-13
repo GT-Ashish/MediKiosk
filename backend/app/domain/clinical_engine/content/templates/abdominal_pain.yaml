@@ -1,0 +1,254 @@
+template_id: abdominal_pain
+version: "1.0.0"
+status: demo_non_production
+
+terminology:
+  system: SNOMED_CT
+  code: "21522001"
+  display: "Abdominal pain"
+
+question_budget:
+  min_questions: 10
+  max_questions: 15
+
+general_modules:
+  - general_history
+
+slots:
+
+  - id: onset
+    type: text
+    required: true
+    priority: 1
+    description: When pain began; sudden or gradual.
+
+  - id: temporal_course
+    type: enum
+    required: true
+    priority: 2
+    allowed_values:
+      - constant
+      - intermittent
+      - recurrent
+      - worsening
+      - improving
+      - unchanged
+      - unknown
+    description: Pattern over time.
+
+  - id: location
+    type: text
+    required: true
+    priority: 3
+    description: Where pain started and where it is now.
+
+  - id: migration
+    type: text
+    required: false
+    priority: 4
+    description: Whether pain moved from one area to another.
+
+  - id: character
+    type: enum
+    required: true
+    priority: 5
+    allowed_values:
+      - cramping
+      - colicky
+      - burning
+      - sharp
+      - stabbing
+      - aching
+      - pressure
+      - other
+      - unknown
+    description: Pain quality.
+
+  - id: severity
+    type: integer
+    required: true
+    priority: 6
+    min: 0
+    max: 10
+    description: Pain severity on 0-10 scale.
+
+  - id: aggravating_or_relieving_factors
+    type: text
+    required: false
+    priority: 7
+    description: >
+      Relation to meals, movement, bowel movements, urination,
+      position or medicines.
+
+  - id: nausea_or_vomiting
+    type: text
+    required: false
+    priority: 8
+    description: >
+      Nausea/vomiting, frequency and whether fluids can be kept down.
+
+  - id: persistent_vomiting_or_cannot_keep_fluids
+    type: boolean
+    required: false
+    priority: 8
+    description: >
+      Repeated vomiting or inability to keep fluids down.
+
+  - id: bowel_changes
+    type: text
+    required: false
+    priority: 9
+    description: >
+      Diarrhea, constipation, bowel habit change, or blood/mucus in stool.
+
+  - id: bowel_obstruction_symptoms
+    type: boolean
+    required: false
+    priority: 9
+    description: >
+      Patient reports inability to pass stool or gas.
+
+  - id: urinary_symptoms
+    type: text
+    required: false
+    priority: 10
+    description: >
+      Dysuria, frequency, urgency, hematuria, flank pain or retention symptoms.
+
+  - id: gastrointestinal_bleeding
+    type: boolean
+    required: false
+    priority: 11
+    description: >
+      Vomiting blood or black/tarry/visibly bloody stool.
+
+  - id: fever_or_chills
+    type: boolean
+    required: false
+    priority: 12
+    description: Fever/chills.
+
+  - id: jaundice
+    type: boolean
+    required: false
+    priority: 13
+    description: Yellowing of eyes/skin or compatible symptoms.
+
+  - id: abdominal_surgery_history
+    type: text
+    required: false
+    priority: 14
+    description: >
+      Previous abdominal/pelvic surgery and major postoperative
+      abdominal problems.
+
+  - id: reproductive_history_detail
+    type: text
+    required: false
+    priority: 15
+    description: >
+      When relevant: pregnancy possibility, menstrual timing,
+      vaginal bleeding/discharge or pelvic symptoms.
+
+context_modules:
+
+  - id: urinary_context
+    triggers:
+      - urinary_symptom_cluster
+      - flank_pain
+    slots:
+      - id: urinary_detail
+        type: text
+        required: false
+        priority: 30
+        description: >
+          Urinary symptoms, flank/back pain or prior stones.
+
+  - id: hepatobiliary_context
+    triggers:
+      - right_upper_quadrant_pain
+      - jaundice
+    slots:
+      - id: hepatobiliary_detail
+        type: text
+        required: false
+        priority: 31
+        description: >
+          Meal relationship, jaundice and prior gallbladder/liver history.
+
+  - id: reproductive_history_context
+    triggers:
+      - lower_abdominal_pain
+      - reproductive_context_needed
+    slots:
+      - id: pelvic_detail
+        type: text
+        required: false
+        priority: 32
+        description: >
+          Pelvic pain, bleeding/discharge, menstrual timing
+          and pregnancy possibility when relevant.
+
+triggers:
+
+  - id: urinary_symptom_cluster
+    description: Abdominal pain with urinary symptoms.
+
+  - id: flank_pain
+    description: Pain in/extends to flank or back.
+
+  - id: right_upper_quadrant_pain
+    description: Predominantly right-upper abdominal pain.
+
+  - id: jaundice
+    description: Yellowing of skin/eyes or compatible symptoms.
+
+  - id: lower_abdominal_pain
+    description: Predominantly lower abdominal/pelvic pain.
+
+  - id: reproductive_context_needed
+    description: >
+      Lower abdominal/pelvic symptoms where reproductive history
+      may materially affect assessment.
+
+red_flags:
+
+  - id: severe_abdominal_pain
+    severity: critical
+    when:
+      all_of:
+        - slot: severity
+          gte: 8
+    action: urgent_clinician_review
+
+  - id: gastrointestinal_bleeding
+    severity: critical
+    when:
+      all_of:
+        - slot: gastrointestinal_bleeding
+          equals: true
+    action: urgent_clinician_review
+
+  - id: obstructive_pattern
+    severity: high
+    when:
+      all_of:
+        - slot: bowel_obstruction_symptoms
+          equals: true
+    action: urgent_clinician_review
+
+  - id: abdominal_pain_with_persistent_vomiting
+    severity: high
+    when:
+      all_of:
+        - slot: persistent_vomiting_or_cannot_keep_fluids
+          equals: true
+    action: urgent_clinician_review
+
+  - id: abdominal_pain_with_jaundice
+    severity: high
+    when:
+      all_of:
+        - slot: jaundice
+          equals: true
+    action: prompt_clinician_review

@@ -1,0 +1,51 @@
+template_id: general_history
+version: "1.0.0"
+status: demo_non_production
+
+slots:
+
+  - id: past_medical_history
+    type: text
+    required: true
+    priority: 70
+    description: >
+      Important diagnosed medical conditions relevant to the current
+      complaint or risk context.
+
+  - id: current_medications
+    type: text
+    required: true
+    priority: 71
+    description: >
+      Current medicines, including important recent medicines;
+      include dose/frequency when known.
+
+  - id: medication_allergies
+    type: text
+    required: true
+    priority: 72
+    description: >
+      Known medication allergies or important adverse reactions;
+      record an explicit negative when none are known.
+
+  - id: previous_similar_episode
+    type: text
+    required: false
+    priority: 73
+    description: >
+      Previous similar problem, approximate timing and what happened.
+
+  - id: relevant_family_history
+    type: text
+    required: false
+    priority: 74
+    description: >
+      Family history relevant to the presenting complaint.
+
+  - id: relevant_social_exposure_history
+    type: text
+    required: false
+    priority: 75
+    description: >
+      Relevant tobacco/nicotine, alcohol/substance, occupation, travel,
+      sick contacts or environmental exposure.

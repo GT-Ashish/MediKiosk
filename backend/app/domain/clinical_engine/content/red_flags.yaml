@@ -1,0 +1,24 @@
+version: "1.0.0"
+status: demo_non_production
+
+global_rules:
+
+  - never_diagnose: >
+      A red flag creates a clinician/triage alert only; never a diagnosis
+      or treatment recommendation.
+
+  - preserve_evidence: >
+      Store triggering slot values, transcript, timestamp and template version
+      with each alert.
+
+  - independent_evaluation: >
+      Evaluate red flags after every accepted state update, independently
+      of question selection.
+
+  - no_llm_red_flags: >
+      The LLM may propose only registered trigger tags; it may not invent
+      a red flag.
+
+  - deployment_policy: >
+      Exact escalation behavior must be defined by the clinical deployment;
+      the demo must not invent an emergency workflow.

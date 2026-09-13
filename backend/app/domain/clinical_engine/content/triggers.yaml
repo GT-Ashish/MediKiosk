@@ -1,0 +1,41 @@
+version: "1.0.0"
+status: demo_non_production
+
+triggers:
+  chest_pain:
+    - exertional_chest_discomfort
+    - chest_discomfort_with_dyspnea
+    - radiation_to_arm_or_jaw
+    - pleuritic_feature
+    - cough_with_chest_discomfort
+    - known_heart_disease
+
+  fever:
+    - respiratory_symptom_cluster
+    - urinary_symptom_cluster
+    - mosquito_exposure
+    - recent_travel
+    - immune_suppression
+
+  cough:
+    - fever_with_cough
+    - wheeze_or_recurrent_airway_symptoms
+    - sick_contact
+    - tuberculosis_exposure
+
+  abdominal_pain:
+    - urinary_symptom_cluster
+    - flank_pain
+    - right_upper_quadrant_pain
+    - jaundice
+    - lower_abdominal_pain
+    - reproductive_context_needed
+
+  headache:
+    - thunderclap_pattern
+    - neurologic_symptom
+    - fever_with_headache
+    - recurrent_similar_headache
+    - sensory_sensitivity
+    - immunosuppression
+    - new_headache_later_life
