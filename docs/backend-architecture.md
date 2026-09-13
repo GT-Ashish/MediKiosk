@@ -1,834 +1,450 @@
-> **Phase 6 — Database + API Implementation**
-> Phase 5 established the architectural contracts. Phase 6 makes them real
-> with SQLAlchemy persistence, Alembic migrations, and live REST APIs.
+# MediKiosk — Authoritative Backend Architecture
+
+> **Definitive Roadmap:**
+> - **Phase 6 — Database + REST API** [COMPLETED]
+> - **Phase 7 — AI + Voice** [PLANNED]
+> - **Phase 8 — Document Intelligence** [PLANNED]
+> - **Phase 9 — ABDM / FHIR** [PLANNED]
+> - **Phase 10 — Full Integration + SIH Demo** [PLANNED]
 
 ---
 
-## Overview
+## 1. System Overview
 
-MediKiosk is an AI-assisted patient history elicitation system for OPD settings.
-The backend is a **FastAPI** application with a layered architecture designed so that:
+MediKiosk is an AI-powered clinical history software platform tailored for hospital outpatient department (OPD) triage. The backend is a high-performance **FastAPI** application structured in strict accordance with clean architecture principles.
 
-- The database can be added without touching the API layer
-- AI services can be added without touching the domain layer
-- OCR providers can be swapped without touching the service layer
-- The frontend communicates only through stable API contracts
-
----
-
-## Layer Architecture
-
-```
-┌──────────────────────────────────────────────────────┐
-│                    API Layer                         │
-│  FastAPI routers — request/response validation       │
-│  /api/health, /api/v1/*                              │
-└──────────────────────┬───────────────────────────────┘
-                       │ calls
-┌──────────────────────▼───────────────────────────────┐
-│                 Service Layer                        │
-│  Business logic, clinical workflow, error handling   │
-│  services/{session,history,documents,summary,review} │
-└────────┬─────────────┬──────────────┬────────────────┘
-         │             │              │
-    Domain Schemas   Errors        Utils
-    (Pydantic only)  (errors.py)   (logging.py)
-         │
-┌────────▼───────────────────────────────────────────┐
-│              Infrastructure Layer                  │
-│  database.py     — SQLAlchemy engine + session     │
-│  repositories/   — database access via ORM         │
-│  integrations/   — OCR, LLM, ABDM (Phase 7+)      │
-└────────────────────────────────────────────────────┘
-         │
-┌────────▼───────────────────────────────────────────┐
-│          Database (PostgreSQL / SQLite)             │
-│  Alembic-managed schema migrations                 │
-└────────────────────────────────────────────────────┘
-```
-
-### API Layer (`app/api/`)
-- Handles HTTP request/response concerns
-- Validates inputs via Pydantic schema request models
-- Maps domain errors to HTTP status codes
-- Never contains business logic
-- Never accesses the database or AI services directly
-
-### Service Layer (`app/services/`)
-- Contains all business logic and clinical workflow
-- Defined as Python **Protocols** (typed interfaces)
-- Concrete implementations in `services/*/impl.py`
-- Enforces consent requirements before any clinical data operation
-- Enforces physician review requirements for AI summaries
-
-### Domain Layer (`app/domain/schemas/`)
-- Pure Pydantic schemas — no ORM, no I/O
-- These are the data contracts used across all layers
-- Define the structure of every MediKiosk concept
-- Safety-critical invariants are encoded at the schema level
-
-### ORM Models (`app/domain/models/`)
-- SQLAlchemy 2.x ORM models — separate from Pydantic schemas
-- Mapped columns use `Mapped`, `mapped_column` (modern API)
-- Repositories handle ORM ↔ domain mapping
-- All models inherit from shared `Base` (DeclarativeBase)
-
-### Infrastructure Layer (`app/infrastructure/`)
-- `database.py` — async engine, session factory, FastAPI dependency
-- `repositories/` — implements persistence via SQLAlchemy ORM
-- `integrations/` — wraps external APIs (OCR, LLM, ABDM) behind clean interfaces (Phase 7+)
+### Key Architectural Tenets
+1. **Frontend/Backend Decoupling:** The React frontend communicates with the FastAPI backend exclusively via well-typed REST and WebSocket APIs.
+2. **Clinical Safety by Design:** MediKiosk assists with history elicitation and document structuring; it **never** diagnoses patients, prescribes treatment, or makes autonomous clinical decisions (AGENTS.md Rule 10). All AI outputs are marked as drafts requiring physician review (AGENTS.md Rule 9).
+3. **Privacy & Data Security:** Patient identifiers are hashed (SHA-256) and raw Aadhaar/ABHA/mobile numbers are never stored in plain text or logged. Informed consent is strictly enforced prior to any clinical data collection.
+4. **Modular AI & Pluggable Integrations:** External capabilities (speech recognition, LLM dialogue, OCR, ABDM) are encapsulated behind stable interface protocols in `infrastructure/integrations/`.
+5. **Database-Agnostic Persistence:** Async SQLAlchemy 2.x ORM with repository patterns supports production PostgreSQL and zero-config development/testing SQLite.
 
 ---
 
-## Phase 6: Database Architecture
+## 2. Layered Architecture
 
-### Database Support
+The application follows a clean 5-tier layered design:
 
-| Driver | URL Pattern | Purpose |
+```
+┌─────────────────────────────────────────────────────────────┐
+│                         API Layer                           │
+│  FastAPI routers — request validation, response serialization│
+│  /api/health (unversioned), /api/v1/* (versioned namespace) │
+└──────────────────────────────┬──────────────────────────────┘
+                               │ calls
+┌──────────────────────────────▼──────────────────────────────┐
+│                       Service Layer                         │
+│  Clinical workflow logic, consent validation, orchestration │
+│  services/{session,history,documents,summary,review}        │
+└──────────────┬───────────────┬──────────────┬───────────────┘
+               │               │              │
+        Domain Schemas      Errors          Utils
+        (Pydantic v2)     (errors.py)    (logging.py)
+               │
+┌──────────────▼──────────────────────────────────────────────┐
+│                    Infrastructure Layer                     │
+│  database.py     — Async engine, sessionmaker, DI dependency│
+│  repositories/   — Data access via SQLAlchemy ORM (Phase 6) │
+│  integrations/   — AI, Speech, OCR, ABDM adapters (Phase 7+) │
+└──────────────────────────────┬──────────────────────────────┘
+                               │ persists
+┌──────────────────────────────▼──────────────────────────────┐
+│                          Database                           │
+│  PostgreSQL (asyncpg) / SQLite (aiosqlite)                  │
+│  Schema versioned and managed by Alembic migrations         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Layer Responsibilities
+
+- **API Layer (`app/api/`)**:
+  - Validates HTTP request payloads using Pydantic request models (`api_schemas.py`).
+  - Converts domain errors into standardized HTTP JSON error responses via global exception handlers.
+  - Contains no business logic and performs no direct database queries.
+
+- **Service Layer (`app/services/`)**:
+  - Implements business logic and clinical state rules defined by Python `Protocol` interfaces (`service.py`).
+  - Enforces mandatory preconditions (e.g., verifying active consent prior to recording clinical answers or uploading documents).
+  - Mediates between the API layer and repository persistence layer.
+
+- **Domain Layer (`app/domain/schemas/`)**:
+  - Pure Pydantic v2 domain schemas modeling core clinical concepts.
+  - Encodes immutable safety invariants (e.g., `is_ai_generated=True`, `requires_physician_review=True`).
+  - Completely independent of ORM, database engines, and network I/O.
+
+- **ORM Layer (`app/domain/models/`)**:
+  - SQLAlchemy 2.x Declarative models mapped to relational database tables.
+  - Explicitly decoupled from domain Pydantic schemas; repositories translate between ORM entities and domain models.
+  - All models inherit from a common `Base` and `TimestampMixin`.
+
+- **Infrastructure Layer (`app/infrastructure/`)**:
+  - `database.py`: Async engine lifecycle, `async_sessionmaker`, and FastAPI request-scoped session dependency (`get_db_session`).
+  - `repositories/`: Concrete repositories handling transactional database queries with SQLAlchemy.
+  - `integrations/`: Extensible adapter boundary for speech, OCR, LLM, and government health registries.
+
+---
+
+## 3. Phase 6: Database & Persistence Implementation
+
+### 3.1 Database Support & Engine Configuration
+
+| Environment | Driver / URL Pattern | Notes |
 |---|---|---|
-| PostgreSQL + asyncpg | `postgresql+asyncpg://user:pass@host:5432/medikiosk` | Production |
-| SQLite + aiosqlite | `sqlite+aiosqlite:///./medikiosk_dev.db` | Development |
-| SQLite + aiosqlite (in-memory) | `sqlite+aiosqlite://` | Testing |
+| **Production** | `postgresql+asyncpg://user:pass@host:5432/medikiosk` | High-throughput asynchronous PostgreSQL |
+| **Development** | `sqlite+aiosqlite:///./medikiosk_dev.db` | Zero-configuration local database |
+| **Testing** | `sqlite+aiosqlite://` | Fast, isolated in-memory test database per test session |
 
-The `DATABASE_URL` environment variable controls which database is used.
-Default is SQLite for zero-config local development.
+The connection is configured via `DATABASE_URL` in `app/config.py`.
 
-### ORM Model Catalogue
+### 3.2 Registered ORM Models & Table Catalog
 
-| Model | Table | Description |
-|---|---|---|
-| `SessionModel` | `kiosk_sessions` | Patient interaction lifecycle (active → completed/abandoned) |
-| `PatientIdentifierModel` | `patient_identifiers` | Privacy-preserving patient reference (hashed, never raw Aadhaar) |
-| `ConsentModel` | `consents` | Two-factor informed consent record |
-| `VisitModel` | `visits` | Clinical encounter with chief complaint |
-| `HistoryAnswerModel` | `history_answers` | Individual Q&A from kiosk conversation |
-| `DocumentModel` | `medical_documents` | Document metadata only (file storage Phase 8) |
+All 6 models are registered with `Base.metadata` via `app/domain/models/__init__.py`:
 
-### Transaction Boundaries
+| ORM Model | Table Name | Key Attributes | Cascade & Constraints |
+|---|---|---|---|
+| `SessionModel` | `kiosk_sessions` | `id` (UUID pk), `language`, `status`, `consent_given`, `created_at`, `updated_at` | Root entity; indexed on `status` |
+| `PatientIdentifierModel` | `patient_identifiers` | `id` (UUID pk), `session_id`, `identifier_type`, `identifier_hash` (SHA-256), `display_name` | `session_id` FK (CASCADE, UNIQUE) |
+| `ConsentModel` | `consents` | `id` (UUID pk), `session_id`, `consented_at`, `consent_version`, `data_use_acknowledged`, `ai_processing_acknowledged` | `session_id` FK (CASCADE, UNIQUE) |
+| `VisitModel` | `visits` | `id` (UUID pk), `session_id`, `chief_complaint`, `department`, `created_at` | `session_id` FK (CASCADE) |
+| `HistoryAnswerModel` | `history_answers` | `id` (UUID pk), `session_id`, `visit_id`, `question_id`, `question_text`, `answer_text`, `answer_source`, `confidence`, `answered_at` | `session_id` FK (CASCADE), `visit_id` FK (SET NULL) |
+| `DocumentModel` | `medical_documents` | `id` (UUID pk), `session_id`, `filename`, `mime_type`, `uploaded_at`, `processing_status`, `file_size_bytes` | `session_id` FK (CASCADE); metadata-only in Phase 6 |
 
-- Each FastAPI request gets its own `AsyncSession`
-- Successful operations: auto-committed at the end of `get_db_session()`
-- Failed operations: auto-rolled back via exception handler
-- Multi-write operations (e.g., consent + session update): both in same transaction
-- Repositories use `flush()` (not `commit()`) to stay within the request transaction
+### 3.3 Transaction Management & Repository Pattern
 
-### Repository Pattern
+- **Unit of Work:** FastAPI's dependency injection yields an `AsyncSession` per HTTP request.
+- **Commit Boundary:** The `get_db_session()` dependency commits successful requests upon completion and automatically issues a rollback if an unhandled exception occurs.
+- **Repository Isolation:** Repositories call `await self._db.flush()` rather than committing directly, allowing multiple repository operations to participate in a single atomic transaction.
+- **Lazy-Load Mitigation:** Eager loading and explicit `await self._db.refresh()` ensure relationship attributes remain accessible across async contexts.
 
-```
-API  →  Service  →  Repository  →  SQLAlchemy ORM  →  Database
-                                         ↕
-                               ORM ↔ Domain mapping
-```
+### 3.4 Alembic Migration Architecture
 
-Each repository:
-- Receives `AsyncSession` via constructor injection
-- Handles CRUD and ORM ↔ Pydantic mapping
-- Never contains business rules (those belong in services)
-- Uses `flush()` to persist within the current transaction
+Schema migrations are managed by Alembic in `backend/alembic/`:
+- `alembic.ini`: Configuration pointing to migration scripts and default connection.
+- `alembic/env.py`: Async-native runner executing migrations via `run_async_migrations()` with `async_engine_from_config`.
+- `alembic/versions/001_initial_schema.py`: Initial migration defining the 6 tables, indexes, unique constraints, and foreign key cascades.
 
-| Repository | Domain Object |
-|---|---|
-| `SQLAlchemySessionRepository` | `KioskSession` |
-| `SQLAlchemyConsentRepository` | `Consent` |
-| `SQLAlchemyVisitRepository` | `Visit` |
-| `SQLAlchemyHistoryRepository` | `HistoryAnswer` |
-| `SQLAlchemyDocumentRepository` | `MedicalDocument` |
-
-### Service Layer
-
-| Service | Status | Notes |
-|---|---|---|
-| `SessionServiceImpl` | ✅ Implemented | Session lifecycle + consent recording |
-| `HistoryServiceImpl` | ✅ Implemented | Answer recording + structured history assembly |
-| `DocumentServiceImpl` | ✅ Implemented | Metadata registration + document limits |
-| `SummaryServiceImpl` | ⏸ Stub | Returns 501 — AI deferred to Phase 7 |
-| `ReviewServiceImpl` | ⏸ Stub | Returns 501 — requires summaries (Phase 7) |
-
-### Alembic Migrations
-
-```
-backend/
-├── alembic.ini                             ← Configuration
-└── alembic/
-    ├── env.py                              ← Async-aware migration runner
-    ├── script.py.mako                      ← Template
-    └── versions/
-        └── 001_initial_schema.py           ← Phase 6 tables
-```
-
-**Running migrations:**
 ```bash
-cd backend
-
-# Apply all migrations
+# Apply pending migrations
 alembic upgrade head
 
-# Rollback
+# Rollback migrations to empty baseline
 alembic downgrade base
 
-# Generate new migration (after model changes)
-alembic revision --autogenerate -m "description"
-```
-
-The migration system reads `DATABASE_URL` from environment variables.
-For development, the default targets the local SQLite file.
-
----
-
-## API Endpoints (Phase 6 — All Live)
-
-### Sessions
-```
-POST /api/v1/sessions                      → 201 Created
-GET  /api/v1/sessions/{session_id}         → 200 / 404
-POST /api/v1/sessions/{session_id}/consent → 200 / 403 / 404
-POST /api/v1/sessions/{session_id}/complete → 200 / 404 / 422
-POST /api/v1/sessions/{session_id}/abandon  → 200 / 404 / 422
-```
-
-### Visits
-```
-POST /api/v1/sessions/{session_id}/visits  → 201 / 403 / 404
-GET  /api/v1/visits/{visit_id}             → 200 / 404
-```
-
-### History
-```
-POST /api/v1/visits/{visit_id}/answers     → 201 / 403 / 404
-GET  /api/v1/visits/{visit_id}/history     → 200 / 404
-```
-
-### Documents
-```
-POST /api/v1/sessions/{session_id}/documents → 201 / 403 / 404 / 422
-GET  /api/v1/sessions/{session_id}/documents → 200 / 404
-GET  /api/v1/documents/{document_id}         → 200 / 404
-```
-
-### Health
-```
-GET  /api/health                           → 200
+# Verify current revision
+alembic current
 ```
 
 ---
 
-## Domain Concepts
+## 4. REST API Reference (Phase 6 Live Endpoints)
 
-| Schema | Description |
-|---|---|
-| `KioskSession` | Top-level container for one patient interaction. Lifecycle: ACTIVE → COMPLETED / ABANDONED |
-| `PatientIdentifier` | Privacy-safe patient reference. Stores only hashed identifiers — never raw Aadhaar |
-| `Consent` | Patient's informed consent record. Two acknowledgements required before data collection |
-| `Visit` | A single clinical encounter. Contains the chief complaint and links to ClinicalHistory |
-| `ClinicalHistory` | SOCRATES-structured history. Progressively built from HistoryAnswers |
-| `HistoryAnswer` | Single Q&A exchange from the kiosk conversation |
-| `MedicalDocument` | Uploaded document metadata. File content managed separately |
-| `DocumentExtraction` | OCR + NER result for a document (Phase 7+) |
-| `MedicalEntity` | A single extracted clinical entity (medication, diagnosis, etc.) |
-| `StructuredHistorySummary` | **AI-generated draft only.** Always requires physician review |
-| `DoctorReview` | Physician's sign-off on a summary. The final clinical confirmation |
+All endpoints are mounted under `/api` (`/api/health` unversioned, `/api/v1/*` versioned).
+
+### 4.1 Health Check
+- `GET /api/health` — Returns application status, version, timestamp, and environment metadata (HTTP 200).
+
+### 4.2 Kiosk Sessions
+- `POST /api/v1/sessions` — Initialize a new kiosk session with language and optional hashed patient identifier (HTTP 201).
+- `GET /api/v1/sessions/{session_id}` — Retrieve session state, consent status, and patient info (HTTP 200 / 404).
+- `POST /api/v1/sessions/{session_id}/consent` — Record two-factor informed consent (`data_use_acknowledged` and `ai_processing_acknowledged`) (HTTP 200 / 403 / 404 / 422).
+- `POST /api/v1/sessions/{session_id}/complete` — Mark session as completed (HTTP 200 / 404 / 422).
+- `POST /api/v1/sessions/{session_id}/abandon` — Mark session as abandoned (HTTP 200 / 404 / 422).
+
+### 4.3 Visits
+- `POST /api/v1/sessions/{session_id}/visits` — Create a clinical visit record with chief complaint and optional department. Requires valid consent (HTTP 201 / 403 / 404).
+- `GET /api/v1/visits/{visit_id}` — Retrieve clinical visit details (HTTP 200 / 404).
+
+### 4.4 Clinical History
+- `POST /api/v1/visits/{visit_id}/answers` — Record a patient Q&A answer (voice/text/button) with optional ASR confidence. Requires consent (HTTP 201 / 403 / 404 / 422).
+- `GET /api/v1/visits/{visit_id}/history` — Retrieve all recorded history answers for the visit (HTTP 200 / 404).
+
+### 4.5 Medical Documents (Metadata)
+- `POST /api/v1/sessions/{session_id}/documents` — Register metadata for an uploaded document. Enforces session document limit and consent check (HTTP 201 / 403 / 404 / 422).
+- `GET /api/v1/sessions/{session_id}/documents` — List all registered document records for a session (HTTP 200 / 404).
+- `GET /api/v1/documents/{document_id}` — Retrieve specific document metadata (HTTP 200 / 404).
 
 ---
 
-## AI Boundary
-
-This is the most important architectural boundary in MediKiosk.
+## 5. Voice & Speech Pipeline Architecture
 
 ```
-Patient Speech / Text
-        ↓
-   ASR Engine (Web Speech API now; Bhashini/Whisper later)
-        ↓
-  Conversation Engine ←── Clinical State Machine
-  (decides which          (determines required fields
-   questions to ask)       from ClinicalHistory schema)
-        ↓
-  ClinicalHistory
-  (structured, validated)
-        ↓
-      LLM ←── Phase 7+
-  (generates narrative,
-   extracts entities,
-   summarises)
-        ↓
-    Validation
-  (schema-checked)
-        ↓
+Patient Audio Input
+       │
+       ├─► [Current Prototype Mechanism]: Web Speech API
+       │   Browser-side speech recognition for interactive frontend prototyping
+       │
+       └─► [Planned Phase 7 Integration]: Bhashini / AI4Bharat ASR
+           Server-side Indian-language automatic speech recognition
+           (Hindi, Marathi, Bengali, Tamil, Telugu, Kannada, English, etc.)
+                   │
+                   ▼
+           Normalized Clinical Text + Confidence Score
+                   │
+                   ▼
+           Recorded via POST /api/v1/visits/{visit_id}/answers
+```
+
+### Current vs. Planned Voice Architecture
+- **Current Prototype Mechanism (Frontend):** The browser's native **Web Speech API** provides immediate voice transcription in the frontend interface.
+- **Planned Phase 7 Mechanism (Backend):** Pluggable Indian-language ASR integration powered by **Bhashini / AI4Bharat** APIs (and local Whisper fallbacks). Audio streams will be processed behind a standardized `SpeechToTextProvider` protocol in `infrastructure/integrations/speech.py`.
+
+---
+
+## 6. Clinical AI & Dialogue Boundary (Planned: Phase 7)
+
+MediKiosk enforces strict boundaries around artificial intelligence:
+
+```
+Patient Answer (Voice/Text)
+            │
+            ▼
+    Clinical State Machine
+    (Deterministic rules determine which SOCRATES question is asked next)
+            │
+            ▼
+       LLM Dialogue Engine ── Phase 7
+    (Rephrases clinical questions into conversational vernacular)
+            │
+            ▼
+   Clinical History (Structured)
+            │
+            ▼
+    LLM Clinical Summarizer ── Phase 7
+    (Generates draft clinical narrative)
+            │
+            ▼
   StructuredHistorySummary
-  (is_ai_generated=True, requires_physician_review=True)
-        ↓
-  Doctor Review (REQUIRED)
+  ┌────────────────────────────────────────────────────────┐
+  │ is_ai_generated = True (HARDCODED FROZEN INVARIANT)    │
+  │ requires_physician_review = True (FROZEN INVARIANT)    │
+  │ review_status = "DRAFT"                                │
+  └────────────────────────────┬───────────────────────────┘
+                               │
+                               ▼
+                   Physician Review & Sign-Off (MANDATORY)
 ```
 
-### What AI does
-- Natural language understanding of patient responses
-- Conversational phrasing of follow-up questions
-- Medical entity extraction from free-text and documents
-- Clinical narrative summarisation
-
-### What AI must NOT do
-- Decide what clinical information is required (the schema does this)
-- Diagnose the patient
-- Make autonomous clinical decisions
-- Generate summaries that bypass physician review
-
-### Safety Invariants (architecturally enforced)
-```python
-# These fields are frozen — they cannot be overridden
-StructuredHistorySummary.is_ai_generated = True        # always
-StructuredHistorySummary.requires_physician_review = True  # always
-```
+### AI Safety Rules
+- **Draft Status Only:** Summaries generated by AI are permanently flagged with `is_ai_generated=True` and `requires_physician_review=True`.
+- **No Autonomous Diagnosis:** The AI pipeline extracts information and drafts summaries; it **never** suggests diagnoses or prescribes treatments.
+- **Physician Oversight:** Only an authenticated doctor can convert a draft summary into a finalized record via `DoctorReview`.
 
 ---
 
-## Document Processing Pipeline
+## 7. Document Intelligence Pipeline (Planned: Phase 8)
+
+Document handling is divided across phases:
 
 ```
-Image / PDF (uploaded at kiosk)
-        ↓
-  File Storage ──── Phase 8+ (local disk / object storage)
-        ↓
-  OCR Engine ─────── Phase 8+ (replaceable: Tesseract / Google Vision / Azure)
-        ↓  raw_text
-  NER Extraction ─── Phase 8+ (LLM-assisted medical entity recognition)
-        ↓  list[MedicalEntity]
-  DocumentExtraction (stored)
-        ↓
-  Synthesis ────────  Phase 8+ (cross-document timeline)
-        ↓
-  document_findings → StructuredHistorySummary
+Phase 6 (Completed):
+  Upload Trigger ──► Register Metadata (POST /sessions/{id}/documents)
+                         └── File size, MIME type, status="pending"
+
+Phase 8 (Planned Document Intelligence):
+  Binary Upload  ──► Secure Storage (Local encrypted storage / MinIO / S3)
+                            │
+                            ▼
+                     OCR & Handwriting Recognition (HTR)
+                     (Tesseract / Google Cloud Vision / Azure AI Document)
+                            │
+                            ▼ raw_text
+                     Clinical Named Entity Recognition (NER)
+                     (Extract medications, lab values, dosages, dates)
+                            │
+                            ▼
+                     Structured DocumentExtraction
 ```
 
-**Provider independence:** The OCR provider is behind an integration interface.
-Swapping providers (e.g., Tesseract → Google Vision) requires only changing
-the registered implementation in `infrastructure/integrations/` — the API
-and service layers remain untouched.
+- **Phase 6 Scope:** Metadata tracking only (`DocumentModel` in `kiosk_sessions`).
+- **Phase 8 Scope:** Actual binary file persistence, OCR for printed reports, handwriting recognition for physician prescriptions, medical entity extraction, and multi-document timeline synthesis.
 
 ---
 
-## Error Handling
+## 8. ABDM / FHIR & Identity Architecture (Planned: Phase 9)
 
-All domain errors inherit from `MediKioskError` and are caught by the API layer.
+In accordance with **AGENTS.md Rule 14**, ABDM integration is strictly deferred until its compliance architecture is fully approved:
 
-| Error | HTTP | When |
+- **Ayushman Bharat Digital Mission (ABDM):**
+  - ABHA (Ayushman Bharat Health Account) creation and verification.
+  - M1, M2, M3 compliance milestones for Health Information Provider (HIP) and Health Information User (HIU).
+- **FHIR Standards:**
+  - Serialization of clinical history into standard HL7 FHIR (Fast Healthcare Interoperability Resources) bundles (Composition, Condition, Observation, Patient).
+- **Aadhaar / e-KYC Integration:**
+  - Real Aadhaar verification via ABDM gateway APIs.
+  - Zero raw Aadhaar storage: MediKiosk stores only irreversibly salted SHA-256 hashes for session correlation.
+
+---
+
+## 9. Error Handling & Security Architecture
+
+### 9.1 Domain Error Hierarchy
+All custom errors extend `MediKioskError` (`app/utils/errors.py`):
+
+| Error Class | HTTP Code | Trigger Condition |
 |---|---|---|
-| `SessionNotFoundError` | 404 | Invalid/expired session ID |
-| `ConsentRequiredError` | 403 | Operation attempted without consent |
-| `MediKioskValidationError` | 422 | Domain validation fails |
-| `DocumentProcessingError` | 500 | OCR/NER pipeline fails |
-| `AIProcessingError` | 502 | LLM call fails |
-| `UnsupportedOperationError` | 501 | Feature not yet implemented |
+| `SessionNotFoundError` | 404 | Session UUID does not exist or expired |
+| `ConsentRequiredError` | 403 | Attempting clinical write operations without consent |
+| `MediKioskValidationError` | 422 | Schema validation failure or invalid state transition |
+| `UnsupportedOperationError` | 501 | Accessing stubbed future-phase endpoints (e.g. summary/review) |
+| `DocumentProcessingError` | 500 | Pipeline failure during document handling (Phase 8) |
+| `AIProcessingError` | 502 | Upstream LLM/ASR service outage (Phase 7) |
 
-**Rule:** Internal details (stack traces, DB errors) are **never** returned to the client.
-Debug details are shown only when `settings.debug = True`.
-
----
-
-## Privacy & Security Architecture
-
-### Principles
-1. **No secrets in source code.** All keys and credentials in `.env` (never committed).
-2. **No raw Aadhaar.** Only SHA-256 hashes of patient identifiers are stored.
-3. **No PII in logs.** The `_PIISafeFilter` logging filter strips sensitive fields.
-4. **Minimum necessary data.** Collect only what is needed for the clinical history.
-5. **Explicit consent.** Two-factor consent required before any clinical data collection.
-6. **Session termination.** Completed/abandoned sessions purge in-memory state.
-7. **AI as draft.** All AI output is explicitly marked as requiring physician review.
-8. **Physician sign-off.** A `DoctorReview` with `status=REVIEWED` is required before clinical use.
-
-### Sensitive Fields (Never Log)
-```python
-# app/utils/logging.py — _SENSITIVE_FIELDS
-"aadhaar", "abha_id", "identifier_hash",
-"answer_text", "raw_text", "patient_name",
-"display_name", "history_narrative",
-"mobile", "phone", "corrections"
-```
-
-### ABDM Note
-ABDM/ABHA integration is **deferred to Phase 9+** per AGENTS.md Rule 14.
-Its architecture must be reviewed for compliance before implementation.
+### 9.2 Privacy & Logging Protection
+`app/utils/logging.py` implements a `_PIISafeFilter` that intercepts all log records:
+- Redacts sensitive attributes: `aadhaar`, `abha_id`, `identifier_hash`, `answer_text`, `raw_text`, `patient_name`, `display_name`, `history_narrative`, `mobile`, `phone`, `corrections`.
+- Prevents leakage of personal identifiable information in server outputs and error payloads.
 
 ---
 
-## Configuration (`app/config.py`)
+## 10. Configuration Reference (`app/config.py`)
 
-All settings are environment-variable driven. Defaults are for local development only.
+Settings are loaded from environment variables using `pydantic-settings`:
 
-| Setting | Env Var | Default | Purpose |
+| Setting | Env Variable | Default | Description |
 |---|---|---|---|
-| `app_env` | `APP_ENV` | `development` | Environment name |
-| `debug` | `DEBUG` | `true` | Enable debug mode (docs, stack traces) |
-| `database_url` | `DATABASE_URL` | `sqlite+aiosqlite:///./medikiosk_dev.db` | Database connection URL |
-| `cors_origins` | `CORS_ORIGINS` | localhost:5173 | Allowed frontend origins |
-| `session_ttl_minutes` | `SESSION_TTL_MINUTES` | `60` | Session expiry (minutes) |
-| `max_documents_per_session` | `MAX_DOCUMENTS_PER_SESSION` | `10` | Upload limit per session |
-| `ai_enabled` | `AI_ENABLED` | `false` | Enable LLM features |
-| `log_level` | `LOG_LEVEL` | `INFO` | Logging verbosity |
+| `app_name` | `APP_NAME` | `MediKiosk Backend` | Application title |
+| `app_env` | `APP_ENV` | `development` | Environment (`development`, `testing`, `production`) |
+| `debug` | `DEBUG` | `true` | Enables Swagger UI and verbose diagnostics |
+| `database_url` | `DATABASE_URL` | `sqlite+aiosqlite:///./medikiosk_dev.db` | SQLAlchemy async connection string |
+| `cors_origins` | `CORS_ORIGINS` | `http://localhost:5173,...` | Allowed CORS origins for frontend client |
+| `session_ttl_minutes` | `SESSION_TTL_MINUTES` | `60` | Inactivity expiry period |
+| `max_documents_per_session`| `MAX_DOCUMENTS_PER_SESSION`| `10` | Maximum attachments per session |
+| `ai_enabled` | `AI_ENABLED` | `false` | Master toggle for Phase 7 AI capabilities |
+| `log_level` | `LOG_LEVEL` | `INFO` | Console logging threshold |
 
 ---
 
-## Testing Strategy
+## 11. Testing & Quality Assurance
 
-### SQLite Test Suite (default)
-- All tests use in-memory async SQLite (`sqlite+aiosqlite://`)
-- No PostgreSQL required to run the test suite
-- Each test gets a fresh database via the `db_client` fixture
-- Tables created automatically via `Base.metadata.create_all()`
+The backend test suite (`tests/backend/`) provides comprehensive asynchronous coverage using `pytest` and `pytest-asyncio`:
 
-### Running Tests
-```bash
-cd backend
-python -m pytest ../tests/ -v
-```
-
-### Test Coverage
-- **Session tests**: create, get, consent, complete, abandon, state transitions, patient identifier
-- **Visit tests**: create, get, consent enforcement, optional department
-- **History tests**: record answer, retrieve history, consent enforcement, multiple answers
-- **Document tests**: register, get, list, consent enforcement, limit enforcement
-- **Schema tests**: Pydantic domain schema validation
-- **Health tests**: API health check
+- **Execution Command:**
+  ```bash
+  pytest tests/ -v
+  ```
+- **Test Categories:**
+  - `test_api_sessions.py`: Session creation, language setting, hashed identifier association, consent verification, completion, abandonment.
+  - `test_api_visits.py`: Visit registration under active sessions, consent checks, department assignments.
+  - `test_api_history.py`: Recording voice/text answers, confidence tracking, visit history querying.
+  - `test_api_documents.py`: Document metadata registration, document limits, session document listing.
+  - `test_schemas.py`: Validation of pure Pydantic domain models and frozen invariants.
+  - `test_health.py`: Endpoint availability and CORS headers.
+- **Isolation:** Tests use isolated in-memory SQLite instances via the `db_client` fixture.
 
 ---
 
-## Local Development Setup
+## 12. Local Development Guide
 
 ```bash
-# 1. Install dependencies
+# 1. Activate Python virtual environment
 cd backend
-pip install -r requirements-dev.txt
+.\.venv\Scripts\Activate.ps1
 
-# 2. Configure environment (optional — defaults work out of the box)
-cp .env.example .env
-
-# 3. Run migrations
+# 2. Run database migrations to head
 alembic upgrade head
 
-# 4. Start the development server
+# 3. Start local development server with auto-reload
 uvicorn app.main:app --reload --port 8000
 
-# 5. Run tests
-python -m pytest ../tests/ -v
-```
-
-**Environment Variables:**
-```
-DATABASE_URL=sqlite+aiosqlite:///./medikiosk_dev.db   # default
-# DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/medikiosk  # production
-APP_ENV=development
-DEBUG=true
+# 4. Run test suite
+pytest ../tests/ -v
 ```
 
 ---
 
-## What Is Intentionally NOT Implemented
+## 13. Definitive Project Roadmap
 
-| Feature | Phase | Reason Deferred |
-|---|---|---|
-| LLM / AI conversation engine | Phase 7 | Requires AI provider selection |
-| Bhashini / AI4Bharat ASR/TTS | Phase 7 | Frontend Web Speech API is sufficient for now |
-| Actual file storage | Phase 8 | Needs storage strategy decision |
-| OCR / handwritten prescription recognition | Phase 8 | Needs provider selection |
-| Medical entity extraction | Phase 8 | Needs OCR + LLM pipeline |
-| ABDM / FHIR integration | Phase 9 | Compliance review required first |
-| Real Aadhaar / e-KYC | Phase 9 | Requires ABDM |
-| Production authentication | Phase 6+ | Doctor dashboard auth before production |
-
----
-
-## Directory Map
-
-```
-backend/
-├── alembic.ini                  ← Alembic migration configuration
-├── alembic/
-│   ├── env.py                   ← Async-aware migration runner
-│   ├── script.py.mako           ← Migration template
-│   └── versions/
-│       └── 001_initial_schema.py ← Phase 6 initial tables
-│
-├── requirements.txt             ← Production dependencies (pinned)
-├── requirements-dev.txt         ← Development dependencies
-├── .env.example                 ← Environment variable template
-│
-└── app/
-    ├── main.py                  ← App factory, CORS, exception handlers, lifespan
-    ├── config.py                ← All settings (env-var driven)
-    │
-    ├── api/
-    │   ├── router.py            ← Aggregates health + v1 router
-    │   ├── dependencies.py      ← DI: session → repos → services
-    │   └── v1/
-    │       ├── router.py        ← v1 endpoint registration
-    │       ├── health.py        ← GET /api/health
-    │       ├── api_schemas.py   ← API request/response models
-    │       ├── sessions.py      ← Session lifecycle endpoints
-    │       ├── visits.py        ← Visit CRUD endpoints
-    │       ├── history.py       ← History Q&A endpoints
-    │       └── documents.py     ← Document metadata endpoints
-    │
-    ├── domain/
-    │   ├── models/              ← SQLAlchemy ORM models
-    │   │   ├── __init__.py      ← Registers all models with Base.metadata
-    │   │   ├── base.py          ← TimestampMixin
-    │   │   ├── session.py       ← SessionModel (kiosk_sessions)
-    │   │   ├── patient.py       ← PatientIdentifierModel (patient_identifiers)
-    │   │   ├── consent.py       ← ConsentModel (consents)
-    │   │   ├── visit.py         ← VisitModel (visits)
-    │   │   ├── history.py       ← HistoryAnswerModel (history_answers)
-    │   │   └── document.py      ← DocumentModel (medical_documents)
-    │   └── schemas/
-    │       ├── session.py       ← KioskSession, SessionStatus
-    │       ├── patient.py       ← PatientIdentifier, IdentifierType
-    │       ├── consent.py       ← Consent
-    │       ├── visit.py         ← Visit
-    │       ├── history.py       ← ClinicalHistory, HistoryAnswer, AnswerSource
-    │       ├── document.py      ← MedicalDocument, DocumentExtraction, MedicalEntity
-    │       ├── summary.py       ← StructuredHistorySummary, ReviewStatus
-    │       └── review.py        ← DoctorReview
-    │
-    ├── services/
-    │   ├── session/
-    │   │   ├── service.py       ← SessionService Protocol
-    │   │   └── impl.py          ← SessionServiceImpl (Phase 6)
-    │   ├── history/
-    │   │   ├── service.py       ← HistoryService Protocol
-    │   │   └── impl.py          ← HistoryServiceImpl (Phase 6)
-    │   ├── documents/
-    │   │   ├── service.py       ← DocumentService Protocol
-    │   │   └── impl.py          ← DocumentServiceImpl (Phase 6)
-    │   ├── summary/
-    │   │   ├── service.py       ← SummaryService Protocol
-    │   │   └── impl.py          ← SummaryServiceImpl (stub — Phase 7)
-    │   └── review/
-    │       ├── service.py       ← ReviewService Protocol
-    │       └── impl.py          ← ReviewServiceImpl (stub — Phase 7)
-    │
-    ├── infrastructure/
-    │   ├── database.py          ← Async engine, session factory, FastAPI dependency
-    │   ├── repositories/
-    │   │   ├── __init__.py      ← Repository exports
-    │   │   ├── session_repo.py  ← SQLAlchemySessionRepository
-    │   │   ├── consent_repo.py  ← SQLAlchemyConsentRepository
-    │   │   ├── visit_repo.py    ← SQLAlchemyVisitRepository
-    │   │   ├── history_repo.py  ← SQLAlchemyHistoryRepository
-    │   │   └── document_repo.py ← SQLAlchemyDocumentRepository
-    │   └── integrations/        ← OCR, LLM, ABDM (Phase 7+)
-    │
-    └── utils/
-        ├── errors.py            ← MediKioskError hierarchy
-        └── logging.py           ← PII-safe logging configuration
-```
-
-
----
-
-## Overview
-
-MediKiosk is an AI-assisted patient history elicitation system for OPD settings.
-The backend is a **FastAPI** application with a layered architecture designed so that:
-
-- The database can be added without touching the API layer
-- AI services can be added without touching the domain layer
-- OCR providers can be swapped without touching the service layer
-- The frontend communicates only through stable API contracts
-
----
-
-## Layer Architecture
-
-```
-┌──────────────────────────────────────────────────────┐
-│                    API Layer                         │
-│  FastAPI routers — request/response validation       │
-│  /api/health, /api/v1/*                              │
-└──────────────────────┬───────────────────────────────┘
-                       │ calls
-┌──────────────────────▼───────────────────────────────┐
-│                 Service Layer                        │
-│  Business logic, clinical workflow, error handling   │
-│  services/{session,history,documents,summary,review} │
-└────────┬─────────────┬──────────────┬────────────────┘
-         │             │              │
-    Domain Schemas   Errors        Utils
-    (Pydantic only)  (errors.py)   (logging.py)
-         │
-┌────────▼───────────────────────────────────────────┐
-│              Infrastructure Layer                  │
-│  repositories/ — database access (Phase 6+)        │
-│  integrations/ — OCR, LLM, ABDM (Phase 7+)         │
-└────────────────────────────────────────────────────┘
-```
-
-### API Layer (`app/api/`)
-- Handles HTTP request/response concerns
-- Validates inputs via Pydantic schema request models
-- Maps domain errors to HTTP status codes
-- Never contains business logic
-- Never accesses the database or AI services directly
-
-### Service Layer (`app/services/`)
-- Contains all business logic and clinical workflow
-- Defined as Python **Protocols** (typed interfaces)
-- Concrete implementations provided by infrastructure (Phase 6+)
-- Enforces consent requirements before any clinical data operation
-- Enforces physician review requirements for AI summaries
-
-### Domain Layer (`app/domain/schemas/`)
-- Pure Pydantic schemas — no ORM, no I/O
-- These are the data contracts used across all layers
-- Define the structure of every MediKiosk concept
-- Safety-critical invariants are encoded at the schema level
-
-### Infrastructure Layer (`app/infrastructure/`)
-- `repositories/` — implements service Protocols against a database (Phase 6+)
-- `integrations/` — wraps external APIs (OCR, LLM, ABDM) behind clean interfaces (Phase 7+)
-
----
-
-## Domain Concepts
-
-| Schema | Description |
-|---|---|
-| `KioskSession` | Top-level container for one patient interaction. Lifecycle: ACTIVE → COMPLETED / ABANDONED |
-| `PatientIdentifier` | Privacy-safe patient reference. Stores only hashed identifiers — never raw Aadhaar |
-| `Consent` | Patient's informed consent record. Two acknowledgements required before data collection |
-| `Visit` | A single clinical encounter. Contains the chief complaint and links to ClinicalHistory |
-| `ClinicalHistory` | SOCRATES-structured history. Progressively built from HistoryAnswers |
-| `HistoryAnswer` | Single Q&A exchange from the kiosk conversation |
-| `MedicalDocument` | Uploaded document metadata. File content managed separately |
-| `DocumentExtraction` | OCR + NER result for a document (Phase 7+) |
-| `MedicalEntity` | A single extracted clinical entity (medication, diagnosis, etc.) |
-| `StructuredHistorySummary` | **AI-generated draft only.** Always requires physician review |
-| `DoctorReview` | Physician's sign-off on a summary. The final clinical confirmation |
-
----
-
-## AI Boundary
-
-This is the most important architectural boundary in MediKiosk.
-
-```
-Patient Speech / Text
-        ↓
-   ASR Engine (Web Speech API now; Bhashini/Whisper later)
-        ↓
-  Conversation Engine ←── Clinical State Machine
-  (decides which          (determines required fields
-   questions to ask)       from ClinicalHistory schema)
-        ↓
-  ClinicalHistory
-  (structured, validated)
-        ↓
-      LLM ←── Phase 7+
-  (generates narrative,
-   extracts entities,
-   summarises)
-        ↓
-    Validation
-  (schema-checked)
-        ↓
-  StructuredHistorySummary
-  (is_ai_generated=True, requires_physician_review=True)
-        ↓
-  Doctor Review (REQUIRED)
-```
-
-### What AI does
-- Natural language understanding of patient responses
-- Conversational phrasing of follow-up questions
-- Medical entity extraction from free-text and documents
-- Clinical narrative summarisation
-
-### What AI must NOT do
-- Decide what clinical information is required (the schema does this)
-- Diagnose the patient
-- Make autonomous clinical decisions
-- Generate summaries that bypass physician review
-
-### Safety Invariants (architecturally enforced)
-```python
-# These fields are frozen — they cannot be overridden
-StructuredHistorySummary.is_ai_generated = True        # always
-StructuredHistorySummary.requires_physician_review = True  # always
-```
-
----
-
-## Document Processing Pipeline
-
-```
-Image / PDF (uploaded at kiosk)
-        ↓
-  File Storage ──── Phase 7+ (local disk / object storage)
-        ↓
-  OCR Engine ─────── Phase 7+ (replaceable: Tesseract / Google Vision / Azure)
-        ↓  raw_text
-  NER Extraction ─── Phase 7+ (LLM-assisted medical entity recognition)
-        ↓  list[MedicalEntity]
-  DocumentExtraction (stored)
-        ↓
-  Synthesis ────────  Phase 7+ (cross-document timeline)
-        ↓
-  document_findings → StructuredHistorySummary
-```
-
-**Provider independence:** The OCR provider is behind an integration interface.
-Swapping providers (e.g., Tesseract → Google Vision) requires only changing
-the registered implementation in `infrastructure/integrations/` — the API
-and service layers remain untouched.
-
----
-
-## Future API Surface
-
-All endpoints below are **documented contracts for Phase 6 implementation**.
-Only `/api/health` is currently live.
-
-```
-GET  /api/health                     — Health check (live)
-
-POST /api/v1/sessions                — Create a new kiosk session
-GET  /api/v1/sessions/{session_id}   — Get session status
-POST /api/v1/sessions/{session_id}/consent    — Record patient consent
-POST /api/v1/sessions/{session_id}/complete   — Complete session
-POST /api/v1/sessions/{session_id}/abandon    — Abandon session
-
-POST /api/v1/visits                  — Create a visit (chief complaint)
-GET  /api/v1/visits/{visit_id}       — Get visit details
-
-POST /api/v1/history/answers         — Record a clinical answer
-GET  /api/v1/history/{session_id}    — Get clinical history for session
-
-POST /api/v1/documents               — Register uploaded document
-GET  /api/v1/documents/{document_id} — Get document metadata
-GET  /api/v1/documents?session_id=   — List documents for session
-
-POST /api/v1/summaries/{session_id}  — Generate AI summary
-GET  /api/v1/summaries/{session_id}  — Get generated summary
-
-POST /api/v1/reviews                 — Submit doctor review
-GET  /api/v1/reviews/{summary_id}    — Get doctor review
-```
-
----
-
-## Error Handling
-
-All domain errors inherit from `MediKioskError` and are caught by the API layer.
-
-| Error | HTTP | When |
-|---|---|---|
-| `SessionNotFoundError` | 404 | Invalid/expired session ID |
-| `ConsentRequiredError` | 403 | Operation attempted without consent |
-| `MediKioskValidationError` | 422 | Domain validation fails |
-| `DocumentProcessingError` | 500 | OCR/NER pipeline fails |
-| `AIProcessingError` | 502 | LLM call fails |
-| `UnsupportedOperationError` | 501 | Feature not yet implemented |
-
-**Rule:** Internal details (stack traces, DB errors) are **never** returned to the client.
-Debug details are shown only when `settings.debug = True`.
-
----
-
-## Privacy & Security Architecture
-
-### Principles
-1. **No secrets in source code.** All keys and credentials in `.env` (never committed).
-2. **No raw Aadhaar.** Only SHA-256 hashes of patient identifiers are stored.
-3. **No PII in logs.** The `_PIISafeFilter` logging filter strips sensitive fields.
-4. **Minimum necessary data.** Collect only what is needed for the clinical history.
-5. **Explicit consent.** Two-factor consent required before any clinical data collection.
-6. **Session termination.** Completed/abandoned sessions purge in-memory state.
-7. **AI as draft.** All AI output is explicitly marked as requiring physician review.
-8. **Physician sign-off.** A `DoctorReview` with `status=REVIEWED` is required before clinical use.
-
-### Sensitive Fields (Never Log)
-```python
-# app/utils/logging.py — _SENSITIVE_FIELDS
-"aadhaar", "abha_id", "identifier_hash",
-"answer_text", "raw_text", "patient_name",
-"display_name", "history_narrative",
-"mobile", "phone", "corrections"
-```
-
-### ABDM Note
-ABDM/ABHA integration is **deferred to Phase 8+** per AGENTS.md Rule 14.
-Its architecture must be reviewed for compliance before implementation.
-
----
-
-## Configuration (`app/config.py`)
-
-All settings are environment-variable driven. Defaults are for local development only.
-
-| Setting | Env Var | Default | Purpose |
+| Phase | Milestone | Scope & Deliverables | Status |
 |---|---|---|---|
-| `app_env` | `APP_ENV` | `development` | Environment name |
-| `debug` | `DEBUG` | `true` | Enable debug mode (docs, stack traces) |
-| `cors_origins` | `CORS_ORIGINS` | localhost:5173 | Allowed frontend origins |
-| `session_ttl_minutes` | `SESSION_TTL_MINUTES` | `60` | Session expiry (minutes) |
-| `max_documents_per_session` | `MAX_DOCUMENTS_PER_SESSION` | `10` | Upload limit per session |
-| `ai_enabled` | `AI_ENABLED` | `false` | Enable LLM features |
-| `log_level` | `LOG_LEVEL` | `INFO` | Logging verbosity |
+| **Phase 6** | **Database + REST API** | SQLAlchemy 2.x async ORM, 6 models, Alembic migrations, complete REST API endpoints for Sessions, Visits, History, Documents | **COMPLETED** |
+| **Phase 7** | **AI + Voice** | Bhashini / AI4Bharat Indian-language ASR integration, clinical dialogue LLM, draft clinical summarization, summary service implementation | **PLANNED** |
+| **Phase 8** | **Document Intelligence** | Binary document storage (local/S3), OCR and handwriting recognition, medical entity extraction (NER), clinical document synthesis | **PLANNED** |
+| **Phase 9** | **ABDM / FHIR** | ABDM M1/M2/M3 compliance, ABHA identity verification, FHIR bundle generation and health information exchange, real Aadhaar/e-KYC | **PLANNED** |
+| **Phase 10** | **Full Integration + SIH Demo**| End-to-end integration, kiosk hardware hardening, multilingual offline failover, final SIH 2026 presentation demonstration | **PLANNED** |
 
 ---
 
-## What Is Intentionally NOT Implemented in Phase 5
-
-| Feature | Reason Deferred |
-|---|---|
-| PostgreSQL / SQLAlchemy | Phase 6 — adds DB without breaking API contracts |
-| Session / Visit / History APIs | Phase 6 — needs DB for persistence |
-| Document file storage | Phase 7 — needs storage strategy decision |
-| LLM integration | Phase 7+ — needs AI_ENABLED=true and provider selection |
-| OCR integration | Phase 7+ — needs provider selection |
-| ASR backend | Phase 7+ — frontend Web Speech API is sufficient for now |
-| ABDM / FHIR integration | Phase 8+ — compliance review required first |
-| Authentication | Phase 6+ — doctor dashboard auth before production |
-| Real patient identity verification | Phase 8+ — requires ABDM |
-
----
-
-## Directory Map
+## 14. Repository Directory Map
 
 ```
 backend/
+├── alembic.ini                             ← Alembic migration configuration
+├── alembic/
+│   ├── env.py                              ← Async-aware migration runner
+│   ├── script.py.mako                      ← Migration script template
+│   └── versions/
+│       └── 001_initial_schema.py           ← Phase 6 initial schema migration
+│
+├── requirements.txt                        ← Pinned production dependencies
+├── requirements-dev.txt                    ← Development dependencies
+├── .env.example                            ← Environment variable template
+│
 └── app/
-    ├── main.py              ← App factory, CORS, exception handlers, lifespan
-    ├── config.py            ← All settings (env-var driven)
+    ├── main.py                             ← FastAPI app factory, CORS, error handlers, lifespan
+    ├── config.py                           ← Application settings (Pydantic Settings)
     │
     ├── api/
-    │   ├── router.py        ← Aggregates health + v1 router
+    │   ├── router.py                       ← Aggregates health check and /v1 routers
+    │   ├── dependencies.py                 ← Dependency injection: DB session -> repos -> services
     │   └── v1/
-    │       ├── health.py    ← GET /api/health (the only live endpoint)
-    │       └── router.py    ← Stable registration point for Phase 6+ endpoints
+    │       ├── router.py                   ← API v1 central router
+    │       ├── health.py                   ← GET /api/health endpoint
+    │       ├── api_schemas.py              ← API request and response models
+    │       ├── sessions.py                 ← Kiosk session lifecycle endpoints
+    │       ├── visits.py                   ← Clinical visit endpoints
+    │       ├── history.py                  ← History Q&A endpoints
+    │       └── documents.py                ← Medical document metadata endpoints
     │
     ├── domain/
-    │   ├── models/          ← Reserved for ORM models (Phase 6+)
-    │   └── schemas/
-    │       ├── session.py   ← KioskSession, SessionStatus
-    │       ├── patient.py   ← PatientIdentifier, IdentifierType
-    │       ├── consent.py   ← Consent
-    │       ├── visit.py     ← Visit
-    │       ├── history.py   ← ClinicalHistory, HistoryAnswer, AnswerSource
-    │       ├── document.py  ← MedicalDocument, DocumentExtraction, MedicalEntity
-    │       ├── summary.py   ← StructuredHistorySummary, ReviewStatus
-    │       └── review.py    ← DoctorReview
+    │   ├── models/                         ← SQLAlchemy 2.x ORM models
+    │   │   ├── __init__.py                 ← Base.metadata registration of all 6 models
+    │   │   ├── base.py                     ← Base and TimestampMixin
+    │   │   ├── session.py                  ← SessionModel (kiosk_sessions)
+    │   │   ├── patient.py                  ← PatientIdentifierModel (patient_identifiers)
+    │   │   ├── consent.py                  ← ConsentModel (consents)
+    │   │   ├── visit.py                    ← VisitModel (visits)
+    │   │   ├── history.py                  ← HistoryAnswerModel (history_answers)
+    │   │   └── document.py                 ← DocumentModel (medical_documents)
+    │   └── schemas/                        ← Pure Pydantic v2 domain schemas
+    │       ├── session.py                  ← KioskSession, SessionStatus
+    │       ├── patient.py                  ← PatientIdentifier, IdentifierType
+    │       ├── consent.py                  ← Consent
+    │       ├── visit.py                    ← Visit
+    │       ├── history.py                  ← ClinicalHistory, HistoryAnswer, AnswerSource
+    │       ├── document.py                 ← MedicalDocument, DocumentExtraction, MedicalEntity
+    │       ├── summary.py                  ← StructuredHistorySummary, ReviewStatus
+    │       └── review.py                   ← DoctorReview
     │
-    ├── services/
-    │   ├── session/service.py   ← SessionService Protocol
-    │   ├── history/service.py   ← HistoryService Protocol
-    │   ├── documents/service.py ← DocumentService Protocol
-    │   ├── summary/service.py   ← SummaryService Protocol
-    │   └── review/service.py    ← ReviewService Protocol
+    ├── services/                           ← Business logic and workflow enforcement
+    │   ├── session/
+    │   │   ├── service.py                  ← SessionService Protocol
+    │   │   └── impl.py                     ← SessionServiceImpl (Phase 6 complete)
+    │   ├── history/
+    │   │   ├── service.py                  ← HistoryService Protocol
+    │   │   └── impl.py                     ← HistoryServiceImpl (Phase 6 complete)
+    │   ├── documents/
+    │   │   ├── service.py                  ← DocumentService Protocol
+    │   │   └── impl.py                     ← DocumentServiceImpl (Phase 6 complete)
+    │   ├── summary/
+    │   │   ├── service.py                  ← SummaryService Protocol
+    │   │   └── impl.py                     ← SummaryServiceImpl (stub for Phase 7)
+    │   └── review/
+    │       ├── service.py                  ← ReviewService Protocol
+    │       └── impl.py                     ← ReviewServiceImpl (stub for Phase 7)
     │
     ├── infrastructure/
-    │   ├── repositories/    ← DB repositories (Phase 6+)
-    │   └── integrations/    ← OCR, LLM, ABDM (Phase 7+)
+    │   ├── database.py                     ← Engine, sessionmaker, get_db_session dependency
+    │   ├── repositories/                   ← SQLAlchemy persistence repositories
+    │   │   ├── __init__.py                 ← Repository exports
+    │   │   ├── session_repo.py             ← SQLAlchemySessionRepository
+    │   │   ├── consent_repo.py             ← SQLAlchemyConsentRepository
+    │   │   ├── visit_repo.py               ← SQLAlchemyVisitRepository
+    │   │   ├── history_repo.py             ← SQLAlchemyHistoryRepository
+    │   │   └── document_repo.py            ← SQLAlchemyDocumentRepository
+    │   └── integrations/                   ← External adapter boundary (Phase 7+)
     │
     └── utils/
-        ├── errors.py        ← MediKioskError hierarchy
-        └── logging.py       ← PII-safe logging configuration
+        ├── errors.py                       ← MediKioskError domain exception hierarchy
+        └── logging.py                      ← PII-safe logging filter and setup
 ```
