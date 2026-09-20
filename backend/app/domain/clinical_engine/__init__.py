@@ -79,6 +79,16 @@ from app.domain.clinical_engine.completion_policy import (
     CompletionResult,
     evaluate_completion,
 )
+from app.domain.clinical_engine.context_activation import (
+    ContextActivationResult,
+    evaluate_context_activation,
+    collect_active_module_slots,
+)
+from app.domain.clinical_engine.red_flag_evaluator import (
+    RedFlagMatch,
+    RedFlagEvaluationResult,
+    evaluate_red_flags,
+)
 
 __all__ = [
     # Enums
@@ -125,4 +135,12 @@ __all__ = [
     "CompletionDecision",
     "CompletionResult",
     "evaluate_completion",
+    # Context activation
+    "ContextActivationResult",
+    "evaluate_context_activation",
+    "collect_active_module_slots",
+    # Red-flag evaluator
+    "RedFlagMatch",
+    "RedFlagEvaluationResult",
+    "evaluate_red_flags",
 ]
