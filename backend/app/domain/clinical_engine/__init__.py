@@ -11,14 +11,16 @@ Architecture principle:
     The backend state is the single source of truth.
 
 Submodules:
-    enums          — Clinical session, slot, and template enumerations
-    slot_state     — Slot state machine with deterministic transition rules
-    duration       — Duration value model with unit normalization
-    template_schema — Pydantic models for clinical template YAML structure
-    session_state  — Clinical conversation state model
-    loader         — Generic YAML template loader
-    validator      — Structural template validator
-    registry       — Template registry/resolver with version pinning
+    enums              — Clinical session, slot, and template enumerations
+    slot_state         — Slot state machine with deterministic transition rules
+    duration           — Duration value model with unit normalization
+    template_schema    — Pydantic models for clinical template YAML structure
+    session_state      — Clinical conversation state model
+    loader             — Generic YAML template loader
+    validator          — Structural template validator
+    registry           — Template registry/resolver with version pinning
+    document_evidence  — Historical document evidence and verification models
+    completion_policy  — Question-budget and completion-policy evaluation
 
 Clinical content YAML files live in:
     clinical_engine/content/
@@ -54,10 +56,29 @@ from app.domain.clinical_engine.template_schema import (
 from app.domain.clinical_engine.session_state import (
     QuestionHistoryEntry,
     CurrentComplaint,
+    PauseReason,
     InterruptionState,
     ClinicalSessionState,
 )
 from app.domain.clinical_engine.registry import TemplateRegistry
+from app.domain.clinical_engine.document_evidence import (
+    EvidenceVerificationStatus,
+    EvidenceDurationClass,
+    DocumentEvidence,
+    HistoricalContextCandidate,
+    VerificationTargetStatus,
+    VerificationTarget,
+)
+from app.domain.clinical_engine.question_selector import (
+    SelectionAction,
+    SelectionResult,
+    select_next_action,
+)
+from app.domain.clinical_engine.completion_policy import (
+    CompletionDecision,
+    CompletionResult,
+    evaluate_completion,
+)
 
 __all__ = [
     # Enums
@@ -84,8 +105,24 @@ __all__ = [
     # Session state
     "QuestionHistoryEntry",
     "CurrentComplaint",
+    "PauseReason",
     "InterruptionState",
     "ClinicalSessionState",
     # Registry
     "TemplateRegistry",
+    # Document evidence
+    "EvidenceVerificationStatus",
+    "EvidenceDurationClass",
+    "DocumentEvidence",
+    "HistoricalContextCandidate",
+    "VerificationTargetStatus",
+    "VerificationTarget",
+    # Question selector
+    "SelectionAction",
+    "SelectionResult",
+    "select_next_action",
+    # Completion policy
+    "CompletionDecision",
+    "CompletionResult",
+    "evaluate_completion",
 ]

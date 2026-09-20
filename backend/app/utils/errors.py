@@ -149,3 +149,91 @@ class UnsupportedOperationError(MediKioskError):
             ),
         )
         self.operation = operation
+
+
+# ── Phase 7: Clinical Engine Errors ───────────────────────────────────────────
+
+
+class ClinicalEngineError(MediKioskError):
+    """
+    Base exception for the Phase 7 clinical history engine.
+
+    All clinical-engine-specific errors inherit from this class
+    so they can be caught as a group while still being part of
+    the top-level MediKioskError hierarchy.
+    """
+
+    def __init__(self, message: str, detail: str | None = None) -> None:
+        super().__init__(message=message, detail=detail)
+
+
+class InvalidSlotTransitionError(ClinicalEngineError):
+    """
+    Raised when a slot state transition violates the allowed
+    transition rules (e.g. DECLINED → KNOWN).
+
+    Carries the current and target statuses for diagnostics.
+    """
+
+    def __init__(
+        self,
+        current_status: object,
+        target_status: object,
+        reason: str | None = None,
+    ) -> None:
+        detail = reason or (
+            f"Transition from {current_status!r} to {target_status!r} "
+            f"is not allowed."
+        )
+        super().__init__(
+            message=(
+                f"Invalid slot transition: "
+                f"{current_status!r} → {target_status!r}"
+            ),
+            detail=detail,
+        )
+        self.current_status = current_status
+        self.target_status = target_status
+
+
+class TemplateValidationError(ClinicalEngineError):
+    """
+    Raised when a clinical template fails structural validation.
+
+    Carries the template ID and a list of validation error messages.
+    """
+
+    def __init__(
+        self,
+        template_id: str,
+        errors: list[str] | None = None,
+    ) -> None:
+        error_summary = "; ".join(errors) if errors else "Unknown validation error"
+        super().__init__(
+            message=f"Template validation failed: {template_id}",
+            detail=error_summary,
+        )
+        self.template_id = template_id
+        self.validation_errors = errors or []
+
+
+class TemplateNotFoundError(ClinicalEngineError):
+    """
+    Raised when a requested template is not found in the registry.
+    """
+
+    def __init__(
+        self,
+        template_id: str,
+        version: str | None = None,
+    ) -> None:
+        version_part = f" version '{version}'" if version else ""
+        super().__init__(
+            message=f"Template not found: '{template_id}'{version_part}",
+            detail=(
+                f"The requested template '{template_id}'{version_part} "
+                f"is not registered."
+            ),
+        )
+        self.template_id = template_id
+        self.version = version
